@@ -23,7 +23,10 @@
 ├─ samples/                  演示与测试样例，E 负责
 ├─ docs/
 │  ├─ api.md                 接口约定，C 维护
-│  └─ acceptance.md          验收清单，E 维护
+│  ├─ acceptance.md          验收清单，E 维护
+│  ├─ tasks.md               任务看板 + C 的工作顺序
+│  ├─ workflow.md            日常协作操作手册（每人每天都看这个）
+│  └─ github.md              克隆、上传与代理配置
 └─ README.md                 启动与使用说明
 ```
 
