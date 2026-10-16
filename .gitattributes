@@ -1,0 +1,8 @@
+# 统一换行符，避免不同电脑（Windows / macOS）之间出现整文件“伪改动”
+* text=auto eol=lf
+
+# 二进制文件不做换行转换
+*.png binary
+*.jpg binary
+*.pdf binary
+*.db binary
