@@ -82,9 +82,18 @@ git config --unset https.proxy
 新成员第一次拿到代码（仓库是私人的，需要先被加入 Collaborators）：
 
 ```bash
-git clone https://github.com/philo-beep/-.git
-cd -
+git clone https://github.com/philo-beep/chat-analysis.git
+cd chat-analysis
 git branch -a          # 能看到 main 和五个功能分支
 ```
 
 然后按 README 的步骤安装依赖、启动前后端，确认自己这台电脑能跑起来，再开始开发。
+
+## 如果你在仓库改名之前就克隆过
+
+仓库地址从 `philo-beep/-` 改成了 `philo-beep/chat-analysis`。GitHub 会把旧地址自动跳转过来，所以**不改也能继续用**，但建议改掉，免得以后报错信息看着奇怪：
+
+```bash
+git remote set-url origin https://github.com/philo-beep/chat-analysis.git
+git remote -v          # 确认显示的是新地址
+```
