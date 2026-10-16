@@ -83,6 +83,8 @@ npm run dev
 
 ## 分支与合并规则
 
+每天的具体操作步骤（含每条命令会产生什么结果）见 [docs/workflow.md](docs/workflow.md)。
+
 | 分支 | 用途 |
 | --- | --- |
 | main | 当前能够运行的共同版本 |
