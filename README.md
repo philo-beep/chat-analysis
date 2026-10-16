@@ -1,4 +1,4 @@
-# 项目（聊天分析协作项目）
+# 面向小微商家的 AI 客户需求整理与跟进助手
 
 输入一段聊天原文，输出结构化结果：**需求**、**待确认问题**、**建议待办**、**回复草稿**。
 
@@ -29,6 +29,10 @@
 │  └─ github.md              克隆、上传与代理配置
 └─ README.md                 启动与使用说明
 ```
+
+除了上面这些，还有几个让项目能真正跑起来的文件：`frontend/index.html`、`package.json`、
+`vite.config.js`、`src/main.js`，以及 `backend/requirements.txt`、`.env.example`，
+还有根目录的 `.gitignore`、`.gitattributes`。
 
 ## 环境准备与启动
 
@@ -99,7 +103,7 @@ npm run dev
 
 每个人的工作循环：
 
-1. 从最新的 `main` 创建自己的功能分支。
+1. 切到自己的功能分支，并把最新的 `main` 合并进来（分支已经建好了，不用自己创建）。
 2. 修改负责的文件，在本机运行检查。
 3. 提交并上传代码。
 4. 发起合并请求（PR），说明做了什么、怎么验证。
@@ -110,14 +114,12 @@ npm run dev
 
 ## 联调检查点
 
-| 检查点 | 必须能实际完成 |
-| --- | --- |
-| 第一次 | 输入聊天 → 后端收到 → 页面显示示例分析结果 |
-| 第二次 | 输入聊天 → 调用真实模型 → 页面显示真实分析结果 |
-| 第三次 | 修改结果 → 保存 → 刷新 → 重新打开 → 导出 |
+三个检查点分别要完成什么、出问题优先找谁，见 [docs/acceptance.md](docs/acceptance.md)。
+进度在 [docs/tasks.md](docs/tasks.md) 里更新。
 
 问题反馈格式：**输入内容、操作步骤、实际结果、预期结果**（附截图）。
 
 ## 上传到 GitHub
 
-详见 [docs/github.md](docs/github.md)。
+- 每天的提交、上传、发 PR：[docs/workflow.md](docs/workflow.md)
+- 克隆、连不上 GitHub 怎么办：[docs/github.md](docs/github.md)

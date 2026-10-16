@@ -4,7 +4,10 @@
 """
 
 import json
+from contextlib import asynccontextmanager
+from pathlib import Path
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -13,7 +16,17 @@ from pydantic import BaseModel, Field
 import database
 from ai_service import analyze_chat
 
-app = FastAPI(title="聊天分析 API", version="0.1.0")
+# 读 backend/.env（复制 .env.example 得到）。密钥只在本机，不进仓库。
+load_dotenv(Path(__file__).parent / ".env")
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    database.init_db()
+    yield
+
+
+app = FastAPI(title="聊天分析 API", version="0.1.0", lifespan=lifespan)
 
 # 开发阶段允许前端本地地址跨域访问
 app.add_middleware(
@@ -37,11 +50,6 @@ class ResultModel(BaseModel):
 
 class SaveRequest(BaseModel):
     result: ResultModel
-
-
-@app.on_event("startup")
-def _startup() -> None:
-    database.init_db()
 
 
 @app.get("/health")

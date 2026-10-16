@@ -1,99 +1,92 @@
-# 上传到 GitHub
+# GitHub 网络与仓库维护
 
-仓库骨架已经建好，本地也已初始化为 git 仓库（分支 `main`）。剩下只差把它接到你的 GitHub 仓库上。
+克隆、提交、上传的**具体步骤**在 [docs/workflow.md](workflow.md)。
+这份文件只讲两件事：连不上 GitHub 怎么办，以及仓库本身怎么维护。
 
-## 方式一：仓库已建好（推荐）
+仓库地址：`https://github.com/philo-beep/chat-analysis`（私有）
 
-在 GitHub 上新建一个**空仓库**（不要勾选 Add a README / .gitignore / license），然后：
+---
 
-```bash
-cd C:\Users\pop\Desktop\项目
-git remote add origin https://github.com/<你的账号>/<仓库名>.git
-git push -u origin main
-```
+# 一、如果连不上 github.com
 
-仓库名建议用英文（例如 `chat-analysis`），路径里有中文容易出现各种编码问题。
-
-## 方式二：创建五个功能分支
-
-骨架提交后，按分工建好各人的分支并推送：
-
-```bash
-git branch codex/input-history
-git branch codex/result-panel
-git branch codex/backend
-git branch codex/ai-analysis
-git branch codex/test-demo
-git push origin codex/input-history codex/result-panel codex/backend codex/ai-analysis codex/test-demo
-```
-
-## 方式三：用图形化 Git 工具
-
-不熟悉命令行也可以用 GitHub Desktop、TortoiseGit 或 VS Code 的源代码管理面板完成提交、推送，再到仓库网页创建 PR。
-
-## 加入成员
-
-仓库页面 → Settings → Collaborators → Add people，把五个人的账号都加进来。
-
-## 注意事项
-
-- 密钥、`.env`、本地数据库已被 `.gitignore` 排除，不会误传。
-- 如果 GitHub 仓库里已经有内容（比如自动生成了 README），直接 push 会被拒绝，先告诉 C 处理。
-
-## 如果连不上 github.com
-
-现象：`git push` 卡很久，最后报
+现象：`git clone` 或 `git push` 卡很久，最后报
 
 ```
 fatal: unable to access 'https://github.com/...': Failed to connect to github.com port 443
 ```
 
-这是网络问题，不是命令写错了。判断方法：浏览器能打开 GitHub 网页，但 git 就是连不上——因为浏览器走系统代理，而 **git 不读系统代理**。
+这是网络问题，不是命令写错了。判断方法：浏览器能打开 GitHub 网页，但 git 就是连不上——
+因为浏览器走系统代理，而 **git 不读系统代理**。
 
-解决办法是让 git 走本地代理端口（把 7897 换成你自己代理软件的端口）：
+让 git 走本地代理端口（`7897` 换成你自己代理软件的端口，每个人不一样）：
 
 ```bash
-# 只对当前仓库生效
-git config http.proxy http://127.0.0.1:7897
-git config https.proxy http://127.0.0.1:7897
-
-# 或者对本机所有仓库生效
 git config --global http.proxy http://127.0.0.1:7897
 git config --global https.proxy http://127.0.0.1:7897
 ```
 
-检查代理端口是否可用：
+**必须用 `--global`**，因为 `git clone` 之前本地还没有仓库，仓库级配置那时候不存在，
+只有全局配置才管用。
+
+先确认端口对不对，再配：
 
 ```bash
 curl -s -o NUL -w "%{http_code}" -x http://127.0.0.1:7897 https://github.com
 ```
 
-返回 `200` 就说明通了。
+返回 `200` 就说明这条路通了。返回 `000` 说明端口填错了，或者代理软件没开。
 
-不需要代理时（比如换到能直连的网络）取消：
-
-```bash
-git config --unset http.proxy
-git config --unset https.proxy
-```
-
-## 克隆到本地
-
-新成员第一次拿到代码（仓库是私人的，需要先被加入 Collaborators）：
+换到能直连的网络后想取消：
 
 ```bash
-git clone https://github.com/philo-beep/chat-analysis.git
-cd chat-analysis
-git branch -a          # 能看到 main 和五个功能分支
+git config --global --unset http.proxy
+git config --global --unset https.proxy
 ```
 
-然后按 README 的步骤安装依赖、启动前后端，确认自己这台电脑能跑起来，再开始开发。
+> 注意：不要照抄别人的端口。每个人的代理软件不一样，端口也不一样。
 
-## 如果你在仓库改名之前就克隆过
+---
 
-仓库地址从 `philo-beep/-` 改成了 `philo-beep/chat-analysis`。GitHub 会把旧地址自动跳转过来，所以**不改也能继续用**，但建议改掉，免得以后报错信息看着奇怪：
+# 二、如果你在仓库改名之前就克隆过
+
+仓库地址从 `philo-beep/-` 改成了 `philo-beep/chat-analysis`。GitHub 会把旧地址自动跳转，
+**不改也能继续用**，但建议改掉，免得以后报错信息看着奇怪：
 
 ```bash
 git remote set-url origin https://github.com/philo-beep/chat-analysis.git
 git remote -v          # 确认显示的是新地址
 ```
+
+---
+
+# 三、仓库维护（C 用）
+
+## 加人、移人、改权限
+
+仓库页面 → Settings → Collaborators → Add people。默认给 **Write** 就够：
+能推自己的分支、能发 PR、能评论；不能改仓库设置、不能删仓库、不能加人。
+
+谁退出项目了就移掉，之后他本机就推不上来了。
+
+## 待接受的邀请
+
+邀请发出去之后对方**必须自己点接受**。没接受的表现在这里看：
+Settings → Collaborators 里的 Pending invitations。
+
+对方如果还没接受就克隆，报的错是 `Repository not found`——看起来像地址写错了，
+其实是没有权限，这一点非常容易误判。
+
+## 密钥不进仓库
+
+密钥写在各自电脑的 `backend/.env` 里（复制 `backend/.env.example` 得到），
+`.env` 已经被 `.gitignore` 排除，提交不上去。**不要把密钥贴到代码、聊天记录或截图里。**
+
+## main 分支加不了保护规则
+
+免费账号的私有仓库不支持分支保护（GitHub 会提示要升级 Pro 或改成公开仓库）。
+所以"谁都不直接推 main"只能靠约定，见 [docs/workflow.md](workflow.md)。
+
+## 合并 PR 之后不要点 Delete branch
+
+`codex/xxx` 是每个人长期使用的分支，不是一次性分支。删掉之后对方下次推送会把分支重新建回来，
+或者直接报错，白折腾一轮。

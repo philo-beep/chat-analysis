@@ -34,16 +34,10 @@
 curl -s -o NUL -w "%{http_code}" https://github.com
 ```
 
-返回 `200` 就跳过这步。如果卡住不动或者报连接失败，说明要走代理（`7897` 换成你自己代理软件的端口）：
+返回 `200` 就跳过这步。如果卡住不动、或者报 `Failed to connect to github.com`，
+说明要走代理——配法在 [docs/github.md](github.md) 的「如果连不上 github.com」一节。
 
-```bash
-git config --global http.proxy http://127.0.0.1:7897
-git config --global https.proxy http://127.0.0.1:7897
-```
-
-**这里必须用 `--global`**：克隆之前本地还没有仓库，仓库级配置那时候根本不存在，只有全局配置才管用。
-
-结果：git 能连上 GitHub，后面所有命令都正常。
+**这一步要在克隆之前做完**，配好再回来继续。
 
 ## 3. 克隆仓库
 
@@ -52,7 +46,10 @@ git clone https://github.com/philo-beep/chat-analysis.git
 cd chat-analysis
 ```
 
-结果：本地多出一个 `chat-analysis` 文件夹，里面是完整项目（23 个文件），并且自动停在 `main` 分支。
+结果：本地多出一个 `chat-analysis` 文件夹，里面是完整项目，并且自动停在 `main` 分支。
+
+不习惯命令行也可以用 GitHub Desktop、TortoiseGit 或 VS Code 的源代码管理面板，
+只需要仓库地址，登录用你自己的 GitHub 账号。
 
 ## 4. 切到自己的分支
 

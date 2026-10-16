@@ -4,7 +4,7 @@ import { ref } from 'vue'
 import ChatInput from './components/ChatInput.vue'
 import RecordList from './components/RecordList.vue'
 import ResultPanel from './components/ResultPanel.vue'
-import { analyze, listRecords } from './api.js'
+import { analyze, getRecord, listRecords } from './api.js'
 
 const records = ref([])
 const result = ref(null)
@@ -32,13 +32,27 @@ async function refreshRecords() {
   }
 }
 
+// 列表里只有标题和时间，没有 result，所以点开时要按 id 再取一次完整记录。
+async function openRecord(record) {
+  loading.value = true
+  error.value = ''
+  try {
+    const full = await getRecord(record.id)
+    result.value = full.result
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    loading.value = false
+  }
+}
+
 refreshRecords()
 </script>
 
 <template>
   <div class="layout">
     <aside class="sidebar">
-      <RecordList :records="records" @select="(r) => (result = r.result)" @refresh="refreshRecords" />
+      <RecordList :records="records" @select="openRecord" @refresh="refreshRecords" />
     </aside>
     <main class="main">
       <h1>聊天分析</h1>
