@@ -44,6 +44,9 @@ refreshRecords()
       <h1>聊天分析</h1>
       <ChatInput :loading="loading" @submit="handleAnalyze" />
       <p v-if="error" class="error">{{ error }}</p>
+      <p v-if="result && result.is_sample" class="sample-flag">
+        当前显示的是开发样例，不是真实模型结果
+      </p>
       <ResultPanel :result="result" />
     </main>
   </div>
@@ -66,5 +69,12 @@ refreshRecords()
 }
 .error {
   color: #dc2626;
+}
+.sample-flag {
+  padding: 8px 12px;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 4px;
+  font-size: 14px;
 }
 </style>
