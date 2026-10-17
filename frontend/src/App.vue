@@ -10,25 +10,32 @@ const records = ref([])
 const result = ref(null)
 const loading = ref(false)
 const error = ref('')
+const recordId = ref(null)
+const recordsLoading = ref(false)
 
-async function handleAnalyze(text) {
+async function handleAnalyze(payload) {
   loading.value = true
   error.value = ''
   try {
-    result.value = await analyze(text)
-    records.value = await listRecords()
+    const response = await analyze(payload)
+    recordId.value = response.id ?? null
+    result.value = response
+    await refreshRecords()
   } catch (e) {
-    error.value = e.message
+    error.value = e instanceof Error ? e.message : '分析失败，请稍后重试'
   } finally {
     loading.value = false
   }
 }
 
 async function refreshRecords() {
+  recordsLoading.value = true
   try {
     records.value = await listRecords()
   } catch (e) {
-    error.value = e.message
+    error.value = e instanceof Error ? e.message : '历史记录加载失败'
+  } finally {
+    recordsLoading.value = false
   }
 }
 
@@ -38,9 +45,10 @@ async function openRecord(record) {
   error.value = ''
   try {
     const full = await getRecord(record.id)
+    recordId.value = full.id
     result.value = full.result
   } catch (e) {
-    error.value = e.message
+    error.value = e instanceof Error ? e.message : '记录加载失败'
   } finally {
     loading.value = false
   }
@@ -52,7 +60,13 @@ refreshRecords()
 <template>
   <div class="layout">
     <aside class="sidebar">
-      <RecordList :records="records" @select="openRecord" @refresh="refreshRecords" />
+      <RecordList
+        :records="records"
+        :loading="recordsLoading"
+        :error="error"
+        @select="openRecord"
+        @refresh="refreshRecords"
+      />
     </aside>
     <main class="main">
       <h1>聊天分析</h1>

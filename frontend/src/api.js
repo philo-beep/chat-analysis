@@ -1,4 +1,4 @@
-// 前端请求封装，A 负责
+// 前端请求封装，A 负责。
 // 约定见 docs/api.md：字段名称、数据类型、空值规则都要固定。
 
 const BASE_URL = import.meta.env?.VITE_API_BASE ?? 'http://127.0.0.1:8000'
@@ -18,21 +18,46 @@ export const MOCK_RESULT = {
 }
 
 async function request(path, options = {}) {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
-  })
-  if (!res.ok) {
-    throw new Error(`请求失败：${res.status} ${res.statusText}`)
+  const headers = new Headers(options.headers || {})
+  if (options.body && !(options.body instanceof FormData) && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json')
   }
-  return res.json()
+  let res
+  try {
+    res = await fetch(`${BASE_URL}${path}`, { ...options, headers })
+  } catch {
+    throw new Error('无法连接后端服务，请确认后端已启动后重试')
+  }
+  let body = null
+  const contentType = res.headers.get('content-type') || ''
+  if (contentType.includes('application/json')) {
+    try {
+      body = await res.json()
+    } catch {
+      body = null
+    }
+  }
+  if (!res.ok) {
+    const detail = body && typeof body.detail === 'string' ? body.detail : ''
+    throw new Error(detail || `请求失败：${res.status} ${res.statusText}`)
+  }
+  if (contentType.includes('application/json')) return body
+  return res.text()
 }
 
-// 输入聊天原文，返回约定的分析结果。
-export function analyze(text) {
+// 输入聊天原文和可选聊天截图，返回约定的分析结果。
+// 兼容旧调用 analyze('...')，截图请求使用 multipart/form-data。
+export function analyze(input) {
+  const payload = typeof input === 'string' ? { text: input, image: null } : input || {}
+  if (payload.image) {
+    const form = new FormData()
+    form.append('text', payload.text || '')
+    form.append('image', payload.image, payload.image.name || 'chat-screenshot')
+    return request('/analyze', { method: 'POST', body: form })
+  }
   return request('/analyze', {
     method: 'POST',
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({ text: payload.text || '' }),
   })
 }
 
