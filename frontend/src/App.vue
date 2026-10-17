@@ -4,18 +4,21 @@ import { ref } from 'vue'
 import ChatInput from './components/ChatInput.vue'
 import RecordList from './components/RecordList.vue'
 import ResultPanel from './components/ResultPanel.vue'
-import { analyze, getRecord, listRecords } from './api.js'
+import { analyze, getRecord, listRecords, saveRecord } from './api.js'
 
 const records = ref([])
 const result = ref(null)
 const loading = ref(false)
 const error = ref('')
+const saving = ref(false)
+const saveMessage = ref('')
 
 async function handleAnalyze(text) {
   loading.value = true
   error.value = ''
+  saveMessage.value = ''
   try {
-    result.value = await analyze(text)
+    result.value = { ...(await analyze(text)), original_text: text }
     records.value = await listRecords()
   } catch (e) {
     error.value = e.message
@@ -36,13 +39,35 @@ async function refreshRecords() {
 async function openRecord(record) {
   loading.value = true
   error.value = ''
+  saveMessage.value = ''
   try {
     const full = await getRecord(record.id)
-    result.value = full.result
+    result.value = { ...full.result, id: full.id, original_text: full.text, updated_at: full.updated_at }
   } catch (e) {
     error.value = e.message
   } finally {
     loading.value = false
+  }
+}
+
+async function handleSave(updatedResult) {
+  if (!updatedResult?.id) {
+    error.value = '这条结果还没有记录编号，无法保存。'
+    return
+  }
+  saving.value = true
+  error.value = ''
+  saveMessage.value = ''
+  try {
+    const { id, original_text: _originalText, updated_at: _updatedAt, ...data } = updatedResult
+    await saveRecord(id, data)
+    result.value = { ...updatedResult, ...data }
+    await refreshRecords()
+    saveMessage.value = '修改已保存'
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    saving.value = false
   }
 }
 
@@ -61,7 +86,12 @@ refreshRecords()
       <p v-if="result && result.is_sample" class="sample-flag">
         当前显示的是开发样例，不是真实模型结果
       </p>
-      <ResultPanel :result="result" />
+      <ResultPanel
+        :result="result"
+        :saving="saving"
+        :save-message="saveMessage"
+        @save="handleSave"
+      />
     </main>
   </div>
 </template>
