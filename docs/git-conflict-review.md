@@ -42,6 +42,8 @@
 - 修复了测试 SQLite 连接未关闭、Windows 具名日志句柄继承导致清理失败，以及重复 image 表单字段未拒绝的问题。
 - 相关测试显式使用模型替身，证明后端契约和存储链路；不代表真实模型或最终全项目验收通过。详见 `docs/c-progress.md`。
 - `main.py` 和 `docs/api.md` 的未合并索引状态及冲突标记均已清除；本地合并提交没有包含用户 `.obsidian/workspace.json` 修改。
+- 推送前实际执行 `git pull --no-rebase origin codex/backend`，返回 `Already up to date`；远端后端提交 `d0f493e` 为当前本地历史祖先，无需覆盖远端历史。
+- 初次导入曾把 Obsidian 编辑器配置纳入 Git。总控停止跟踪 `.obsidian/` 并加入忽略规则，保留本机文件及其用户修改，避免工作区状态变化反复干扰同步。
 
 ## 用户本轮指定的推送流程
 
