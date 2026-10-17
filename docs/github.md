@@ -18,15 +18,28 @@ fatal: unable to access 'https://github.com/...': Failed to connect to github.co
 这是网络问题，不是命令写错了。判断方法：浏览器能打开 GitHub 网页，但 git 就是连不上——
 因为浏览器走系统代理，而 **git 不读系统代理**。
 
-让 git 走本地代理端口（`7897` 换成你自己代理软件的端口，每个人不一样）：
+已有本地仓库时，优先仅为当前仓库配置 GitHub 代理（`7897` 换成实际代理端口）：
+
+```bash
+git config --local http.https://github.com/.proxy http://127.0.0.1:7897
+```
+
+本机此次排查确认：系统代理为 `127.0.0.1:7897`，Git 未使用该代理时发生过连接重置和 443 连接失败。配置当前仓库代理后，2026-10-18 的 `git fetch origin` 成功。该端口仅适用于当前电脑，请勿在其他电脑照抄。
+
+首次克隆尚无本地仓库时，可以仅为该条命令配置代理：
+
+```bash
+git -c http.proxy=http://127.0.0.1:7897 clone https://github.com/philo-beep/chat-analysis.git
+```
+
+确实需要所有 Git 仓库统一走代理时，才使用全局配置：
 
 ```bash
 git config --global http.proxy http://127.0.0.1:7897
 git config --global https.proxy http://127.0.0.1:7897
 ```
 
-**必须用 `--global`**，因为 `git clone` 之前本地还没有仓库，仓库级配置那时候不存在，
-只有全局配置才管用。
+仓库级设置只能在已有仓库中使用；首次克隆可以使用上面的单条命令配置，无需强制修改所有项目的代理。
 
 先确认端口对不对，再配：
 
@@ -42,6 +55,22 @@ curl -s -o NUL -w "%{http_code}" -x http://127.0.0.1:7897 https://github.com
 git config --global --unset http.proxy
 git config --global --unset https.proxy
 ```
+
+如果此前配置的是当前仓库的 GitHub 专用代理，则在仓库中取消对应设置：
+
+```bash
+git config --local --unset http.https://github.com/.proxy
+```
+
+连接失败先验证代理进程和端口，再决定是否重试。不要通过关闭 TLS 验证解决网络错误。
+
+## 已有仓库与提交历史检查
+
+本项目始终使用既有的 `philo-beep/chat-analysis` 仓库。目录名称与 GitHub 仓库名称不同不影响工作，不要重新创建仓库。
+
+本地目录若是从文件复制而来，先核验 `git remote -v` 和与 `origin/main` 的共同祖先，避免把重新初始化的独立历史直接推向已有仓库。本次旧的本地根提交已保存在 `archive/local-initial-root`，后续分支已连接既有远端历史，无需重做初始化。
+
+每次 push 前都要按 [推送确认规则](workflow.md) pull、审查队友变更、处理冲突并自测，等待用户确认。网络失败与 non-fast-forward 是不同问题；后者应核对远端历史，禁止通过强制推送绕过。
 
 > 注意：不要照抄别人的端口。每个人的代理软件不一样，端口也不一样。
 
