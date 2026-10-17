@@ -1,6 +1,6 @@
 <!-- 聊天输入，A 负责 -->
 <script setup>
-import { ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 
 const props = defineProps({
   loading: { type: Boolean, default: false },
@@ -8,11 +8,12 @@ const props = defineProps({
 
 const emit = defineEmits(['submit'])
 const text = ref('')
+const customerName = ref('')
 const image = ref(null)
 const imageUrl = ref('')
 const inputError = ref('')
 
-const demoText = '我们想定制100件文化衫，总预算3000元，10月30日前收到，需要你们提供设计。'
+const demoText = '客户：我们想定制100件文化衫，总预算3000元，10月30日前收到，需要你们提供设计。'
 
 function setImage(file) {
   inputError.value = ''
@@ -45,46 +46,80 @@ function onPaste(event) {
 }
 
 function fillDemo() {
+  if (props.loading) return
+  customerName.value = '演示客户'
   text.value = demoText
   inputError.value = ''
 }
 
+function handleShortcut(event) {
+  if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'd') {
+    event.preventDefault()
+    fillDemo()
+  }
+}
+
+onMounted(() => window.addEventListener('keydown', handleShortcut))
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleShortcut)
+  if (imageUrl.value) URL.revokeObjectURL(imageUrl.value)
+})
+
 function submit() {
+  if (props.loading) return
   const value = text.value.trim()
   if (!value && !image.value) {
     inputError.value = '请粘贴聊天原文或上传聊天截图'
     return
   }
   inputError.value = ''
-  emit('submit', { text: value, image: image.value })
+  const name = customerName.value.trim().replace(/[\r\n]+/g, ' ')
+  const originalText = name ? `客户名称：${name}\n${text.value}` : text.value
+  emit('submit', { text: originalText, image: image.value })
 }
 
-function clear() {
-  text.value = ''
+function removeImage() {
   image.value = null
   if (imageUrl.value) URL.revokeObjectURL(imageUrl.value)
   imageUrl.value = ''
+}
+
+function clear() {
+  customerName.value = ''
+  text.value = ''
+  removeImage()
   inputError.value = ''
 }
 </script>
 
 <template>
   <section class="chat-input">
+    <label class="customer-label" for="customer-name">客户名称（可选）</label>
+    <input
+      id="customer-name"
+      v-model="customerName"
+      class="customer-name"
+      placeholder="例如：张先生 / 某某公司"
+      maxlength="100"
+      :disabled="props.loading"
+    />
+    <label class="customer-label" for="chat-text">聊天原文</label>
+    <p id="role-hint" class="role-hint">多轮聊天请按发言顺序逐行填写：客户：… / 商家：…；仅有客户原话也可以直接粘贴。</p>
     <textarea
+      id="chat-text"
       v-model="text"
       rows="6"
-      placeholder="把聊天原文粘贴到这里，例如：我们想定制 100 件文化衫"
+      placeholder="客户：想定制一批文化衫。&#10;商家：预计多少件，有预算要求吗？&#10;客户：大概100件，预算三四千。"
+      aria-describedby="role-hint"
       :disabled="props.loading"
       @paste="onPaste"
-      @keydown.ctrl.shift.d.prevent="fillDemo"
-      @keydown.meta.shift.d.prevent="fillDemo"
     />
     <div class="upload-row">
       <label class="upload-button">
         上传聊天截图
         <input type="file" accept="image/*" :disabled="props.loading" @change="onFileChange" />
       </label>
-      <button v-if="image" type="button" class="file-name" :disabled="props.loading" @click="clear">
+      <button v-if="image" type="button" class="file-name" :disabled="props.loading" @click="removeImage">
         {{ image.name }} ×
       </button>
       <span class="hint">Ctrl/Cmd + Shift + D 填充演示样例</span>
@@ -101,6 +136,25 @@ function clear() {
 </template>
 
 <style scoped>
+.customer-label {
+  display: block;
+  margin: 10px 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.customer-name {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font: inherit;
+}
+.role-hint {
+  margin: 0 0 8px;
+  color: #64748b;
+  font-size: 13px;
+}
 textarea {
   width: 100%;
   box-sizing: border-box;
