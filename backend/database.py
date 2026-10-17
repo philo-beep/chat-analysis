@@ -43,16 +43,29 @@ def init_db() -> None:
             )
             """
         )
+        columns = {row["name"] for row in conn.execute("PRAGMA table_info(records)")}
+        for name, declaration in {
+            "source_input": "TEXT",
+            "source_image": "TEXT",
+            "source_transcript": "TEXT NOT NULL DEFAULT ''",
+        }.items():
+            if name not in columns:
+                conn.execute(f"ALTER TABLE records ADD COLUMN {name} {declaration}")
 
 
-def save_record(text: str, result: dict) -> int:
+def save_record(
+    text: str, result: dict, *, source_input: dict | None = None,
+    source_image: str | None = None, source_transcript: str = "",
+) -> int:
     now = datetime.now().isoformat(timespec="seconds")
     title = text.strip().splitlines()[0][:30] if text.strip() else "未命名"
     with _connect() as conn:
         cur = conn.execute(
-            "INSERT INTO records (title, text, result, created_at, updated_at)"
-            " VALUES (?, ?, ?, ?, ?)",
-            (title, text, json.dumps(result, ensure_ascii=False), now, now),
+            "INSERT INTO records (title, text, result, created_at, updated_at,"
+            " source_input, source_image, source_transcript) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (title, text, json.dumps(result, ensure_ascii=False), now, now,
+             json.dumps(source_input, ensure_ascii=False) if source_input is not None else None,
+             source_image, source_transcript),
         )
         return int(cur.lastrowid)
 
@@ -69,7 +82,8 @@ def list_records() -> list[dict]:
 def get_record(record_id: int) -> dict | None:
     with _connect() as conn:
         row = conn.execute(
-            "SELECT id, title, text, result, created_at, updated_at FROM records"
+            "SELECT id, title, text, result, created_at, updated_at,"
+            " source_input, source_image, source_transcript FROM records"
             " WHERE id = ?",
             (record_id,),
         ).fetchone()
@@ -83,6 +97,13 @@ def get_record(record_id: int) -> dict | None:
     if not isinstance(result, dict):
         raise RecordDataError(f"记录 {record_id} 的结果不是 JSON 对象")
     record["result"] = result
+    if record["source_input"] is not None:
+        try:
+            record["source_input"] = json.loads(record["source_input"])
+        except (json.JSONDecodeError, TypeError) as exc:
+            raise RecordDataError(f"记录 {record_id} 的原始输入无法解析") from exc
+        if not isinstance(record["source_input"], dict):
+            raise RecordDataError(f"记录 {record_id} 的原始输入不是 JSON 对象")
     return record
 
 

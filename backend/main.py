@@ -3,19 +3,28 @@
 接口约定见 docs/api.md，字段名称 / 数据类型 / 空值规则都要固定。
 """
 
+import base64
+import io
 import logging
 import sqlite3
+import warnings
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Literal, TypedDict
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictStr, ValidationError
+from fastapi.exceptions import RequestValidationError
+from PIL import Image, UnidentifiedImageError
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictStr, ValidationError, model_validator
+from starlette.concurrency import run_in_threadpool
+from starlette.datastructures import UploadFile
 
 import database
 from ai_service import analyze_chat
+from ai_contract import AnalysisOutcome
 
 # 读 backend/.env（复制 .env.example 得到）。密钥只在本机，不进仓库。
 load_dotenv(Path(__file__).parent / ".env")
@@ -40,8 +49,52 @@ app.add_middleware(
 )
 
 
+class ChatMessageIn(BaseModel):
+    """一条聊天消息。
+
+    speaker 和 role 可以提供一个；都没有时按“未标注”处理。content 和 text
+    是内容字段的两种写法，content 优先。兼容常见的 {"role", "content"} 前端消息格式。
+    """
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    speaker: StrictStr | None = Field(None, description="显示名称，例如：客户、商家")
+    role: StrictStr | None = Field(None, description="角色，例如：customer、seller")
+    content: StrictStr | None = Field(None, description="消息内容")
+    text: StrictStr | None = Field(None, description="消息内容的兼容写法")
+    time: StrictStr | None = Field(None, description="消息时间，可选")
+    timestamp: StrictStr | None = Field(None, description="消息时间的兼容写法")
+
+
 class AnalyzeRequest(BaseModel):
-    text: StrictStr = Field(..., description="聊天原文（含客户名称）")
+    """保留既有 text / messages 两种 JSON 输入。"""
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    text: StrictStr | None = Field(None, description="聊天原文（含客户名称）")
+    messages: list[ChatMessageIn | StrictStr] | None = None
+
+    @model_validator(mode="after")
+    def require_one_input(self) -> "AnalyzeRequest":
+        if self.text is None and self.messages is None:
+            raise ValueError("请提供 text 或 messages")
+        if self.text is not None and self.messages is not None:
+            raise ValueError("text 和 messages 只能提供一个")
+        return self
+
+
+class NormalizedMessage(TypedDict):
+    role: Literal["customer", "seller", "unknown"]
+    speaker: str
+    content: str
+    time: str | None
+
+
+class NormalizedChat(TypedDict):
+    source: Literal["text", "messages"]
+    text: str
+    messages: list[NormalizedMessage]
+    message_count: int
 
 
 class RequirementModel(BaseModel):
@@ -92,19 +145,168 @@ async def record_data_error(request: Request, exc: database.RecordDataError) -> 
     )
 
 
+_CUSTOMER_ROLES = {
+    "customer",
+    "client",
+    "buyer",
+    "user",
+    "顾客",
+    "客户",
+    "甲方",
+    "买家",
+    "用户",
+}
+_SELLER_ROLES = {
+    "seller",
+    "merchant",
+    "assistant",
+    "客服",
+    "商家",
+    "卖家",
+    "乙方",
+    "销售",
+}
+_ROLE_LABELS = {"customer": "客户", "seller": "商家"}
+
+
+def _normalize_role(role: str | None, speaker: str | None) -> str:
+    value = (role or speaker or "").strip().lower()
+    if value in _CUSTOMER_ROLES:
+        return "customer"
+    if value in _SELLER_ROLES:
+        return "seller"
+    return "unknown"
+
+
+def _normalize_message(item: ChatMessageIn | str, index: int) -> NormalizedMessage:
+    if isinstance(item, str):
+        content = item.strip()
+        if not content:
+            raise HTTPException(status_code=400, detail=f"第 {index} 条消息不能为空")
+        return {
+            "role": "unknown",
+            "speaker": "未标注",
+            "content": content,
+            "time": None,
+        }
+
+    content = (item.content if item.content is not None else item.text or "").strip()
+    if not content:
+        raise HTTPException(status_code=400, detail=f"第 {index} 条消息不能为空")
+
+    speaker = (item.speaker or "").strip()
+    role = _normalize_role(item.role, speaker)
+    message_time = (item.time if item.time is not None else item.timestamp or "").strip() or None
+    return {
+        "role": role,
+        "speaker": speaker or _ROLE_LABELS.get(role, "未标注"),
+        "content": content,
+        "time": message_time,
+    }
+
+
+def _render_message(message: NormalizedMessage) -> str:
+    time_prefix = f"{message['time']} " if message["time"] else ""
+    role_label = _ROLE_LABELS.get(message["role"])
+    speaker = message["speaker"]
+    if role_label and speaker != role_label:
+        speaker = f"{role_label}({speaker})"
+    return f"[{time_prefix}{speaker}] {message['content']}"
+
+
+def normalize_analyze_request(payload: AnalyzeRequest) -> NormalizedChat:
+    """把两种前端入参统一成后续 AI 和数据库都能直接使用的 Python 数据。"""
+    if payload.text is not None:
+        text = payload.text.strip()
+        if not text:
+            raise HTTPException(status_code=400, detail="聊天原文不能为空")
+        return {
+            "source": "text",
+            "text": text,
+            "messages": [],
+            "message_count": 0,
+        }
+
+    if not payload.messages:
+        raise HTTPException(status_code=400, detail="聊天消息不能为空")
+
+    messages = [
+        _normalize_message(item, index)
+        for index, item in enumerate(payload.messages, 1)
+    ]
+    return {
+        "source": "messages",
+        "text": "\n".join(_render_message(message) for message in messages),
+        "messages": messages,
+        "message_count": len(messages),
+    }
+
+
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
 
 
-@app.post("/analyze")
-def analyze(payload: AnalyzeRequest) -> dict:
-    """输入聊天原文，返回需求、待确认问题、建议待办、回复草稿。"""
-    if not payload.text.strip():
-        raise HTTPException(status_code=400, detail="聊天原文不能为空")
+MAX_IMAGE_BYTES = 10 * 1024 * 1024
+MAX_REQUEST_BYTES = MAX_IMAGE_BYTES + 64 * 1024
+MAX_IMAGE_PIXELS = 25_000_000
+IMAGE_MIMES = {"PNG": "image/png", "JPEG": "image/jpeg", "WEBP": "image/webp"}
 
+
+def analyze_chat_with_source(text: str, image_bytes: bytes, image_mime: str) -> AnalysisOutcome:
+    """D 的截图入口延迟导入，文本服务不依赖截图模型加载。"""
+    import ai_service
+
+    handler = getattr(ai_service, "analyze_chat_with_source", None)
+    if handler is None:
+        raise NotImplementedError("本地截图模型尚未接入")
+    return handler(text, image_bytes, image_mime)
+
+
+def validate_image(image_bytes: bytes, declared_mime: str | None) -> str:
+    if not image_bytes:
+        raise HTTPException(status_code=400, detail="聊天截图不能为空")
+    if len(image_bytes) > MAX_IMAGE_BYTES:
+        raise HTTPException(status_code=413, detail="聊天截图不能超过 10 MiB")
     try:
-        raw_result = analyze_chat(payload.text.strip())
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", Image.DecompressionBombWarning)
+            with Image.open(io.BytesIO(image_bytes)) as image:
+                mime = IMAGE_MIMES.get(image.format)
+                if not mime:
+                    raise HTTPException(status_code=415, detail="聊天截图只支持 PNG、JPG、WebP")
+                if image.width * image.height > MAX_IMAGE_PIXELS:
+                    raise HTTPException(status_code=413, detail="聊天截图像素过多，请缩小后重试")
+                image.verify()
+            # verify 检查文件结构，load 检查实际压缩图像能否完整解码。
+            with Image.open(io.BytesIO(image_bytes)) as image:
+                image.load()
+    except (UnidentifiedImageError, OSError, SyntaxError, ValueError):
+        raise HTTPException(status_code=400, detail="聊天截图损坏或不是有效图片") from None
+    except (Image.DecompressionBombError, Image.DecompressionBombWarning):
+        raise HTTPException(status_code=413, detail="聊天截图像素过多，请缩小后重试") from None
+    normalized_mime = "image/jpeg" if declared_mime == "image/jpg" else declared_mime
+    if normalized_mime not in (None, "application/octet-stream", mime):
+        raise HTTPException(status_code=415, detail="图片内容与声明格式不一致")
+    return mime
+
+
+def _analyze_and_save(
+    model_text: str, original_text: str, source_input: dict,
+    image_bytes: bytes | None = None, image_mime: str | None = None,
+) -> dict:
+    source_transcript = ""
+    try:
+        if image_bytes is None:
+            raw_result = analyze_chat(model_text)
+        else:
+            outcome = analyze_chat_with_source(model_text, image_bytes, image_mime)
+            if not isinstance(outcome, AnalysisOutcome) or not isinstance(outcome.source_text, str):
+                raise ValueError("截图模型返回的内部结果不符合约定")
+            source_transcript = outcome.source_text
+            if not source_transcript.strip():
+                raise ValueError("截图模型没有返回可核对的转录")
+            raw_result = outcome.result
     except NotImplementedError:
         logger.exception("模型尚未接入")
         raise HTTPException(status_code=500, detail="真实模型调用尚未实现，请联系 D 完成接入") from None
@@ -121,17 +323,86 @@ def analyze(payload: AnalyzeRequest) -> dict:
         logger.warning("模型结果字段校验失败，共 %s 处错误", exc.error_count())
         raise HTTPException(status_code=500, detail="模型返回结果格式不符合接口约定，请联系 D 检查") from None
 
-    # 开发样例显著标注为假数据；真实分析的每条依据必须出自输入原文。
+    source_text = original_text
+    if image_bytes is not None:
+        source_text += ("\n\n" if source_text else "") + "[聊天截图转录]\n" + source_transcript
+    # 截图证据来自已保存的转录；原图片一同保存，供人工核对转录。
     if not validated.is_sample and any(
-        item.evidence not in payload.text for item in validated.requirements
+        item.evidence not in source_text for item in validated.requirements
     ):
         logger.warning("模型结果包含无法在原文中找到的引用")
         raise HTTPException(status_code=500, detail="模型返回的原文引用无效，请联系 D 检查")
 
     result = validated.model_dump()
-    # 保存完整原始输入，分析时忽略首尾空白，不丢失核对原文所需的信息。
-    record_id = database.save_record(payload.text, result)
+    source_image = None
+    if image_bytes is not None:
+        source_image = f"data:{image_mime};base64," + base64.b64encode(image_bytes).decode("ascii")
+    record_id = database.save_record(
+        source_text, result, source_input=source_input,
+        source_image=source_image, source_transcript=source_transcript,
+    )
     return {"id": record_id, **result}
+
+
+@app.post("/analyze", openapi_extra={
+    "requestBody": {"required": True, "content": {
+        "application/json": {"schema": {"oneOf": [
+            {"type": "object", "required": ["text"], "properties": {"text": {"type": "string"}}},
+            {"type": "object", "required": ["messages"], "properties": {"messages": {
+                "type": "array", "items": {"oneOf": [{"type": "string"}, {"type": "object"}]},
+            }}},
+        ]}},
+        "multipart/form-data": {"schema": {"type": "object", "required": ["image"], "properties": {
+            "text": {"type": "string"}, "image": {"type": "string", "format": "binary"},
+        }}},
+    }},
+})
+async def analyze(request: Request) -> dict:
+    """JSON text/messages 或 multipart text/image；响应六字段保持不变。"""
+    size = 0
+    chunks = []
+    async for chunk in request.stream():
+        size += len(chunk)
+        if size > MAX_REQUEST_BYTES:
+            raise HTTPException(status_code=413, detail="请求过大，聊天截图不能超过 10 MiB")
+        chunks.append(chunk)
+    request._body = b"".join(chunks)
+    content_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+    if content_type == "multipart/form-data":
+        try:
+            async with request.form(max_files=1, max_fields=2) as form:
+                if (set(form) - {"text", "image"} or len(form.getlist("text")) > 1
+                        or len(form.getlist("image")) > 1):
+                    raise HTTPException(status_code=422, detail="表单只接受一个 text 和一个 image")
+                original_text = form.get("text", "")
+                image = form.get("image")
+                if not isinstance(original_text, str) or not isinstance(image, UploadFile):
+                    raise HTTPException(status_code=422, detail="请提供 text 字符串和 image 图片文件")
+                image_bytes = await image.read(MAX_IMAGE_BYTES + 1)
+                image_mime = await run_in_threadpool(validate_image, image_bytes, image.content_type)
+        except HTTPException:
+            raise
+        except Exception:
+            raise HTTPException(status_code=400, detail="图片表单无法读取，请重新上传") from None
+        return await run_in_threadpool(
+            _analyze_and_save, original_text.strip(), original_text,
+            {"text": original_text}, image_bytes, image_mime,
+        )
+    if content_type != "application/json":
+        raise HTTPException(status_code=415, detail="请使用 JSON 文本或 multipart 图片表单")
+    try:
+        original_payload = await request.json()
+        payload = AnalyzeRequest.model_validate(original_payload)
+    except ValidationError as exc:
+        raise RequestValidationError(exc.errors()) from None
+    except ValueError:
+        raise HTTPException(status_code=400, detail="请求不是有效 JSON") from None
+    chat = normalize_analyze_request(payload)
+    original_text = payload.text if payload.text is not None else chat["text"]
+    return await run_in_threadpool(
+        _analyze_and_save, chat["text"], original_text,
+        original_payload,
+    )
 
 
 @app.get("/records")

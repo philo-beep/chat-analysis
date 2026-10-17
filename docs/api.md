@@ -10,19 +10,20 @@
 | --- | --- | --- |
 | 本文件（字段名、类型、空值规则） | C | **C 定规则**，别人不单方面改 |
 | 前端把用户输入变成请求、把结果画成页面 | A、B | 按本文件的请求/响应格式收发 |
-| 接口和数据库 | C | `main.py`、`database.py` |
-| `analyze_chat(text)` 的真实模型调用 | D | **输入一个字符串，输出必须是下面 4 个字段** |
+| 接口、入参整理和数据库 | C | `main.py`、`database.py`；把 `text` / `messages` 统一成 AI 文本 |
+| `analyze_chat(text)` 的真实模型调用 | D | **输入 C 整理好的一个字符串，输出必须是下面 4 个字段** |
 
 最容易出问题的就是 D 这一段：D 只负责"给一段聊天，还回一个符合格式的对象"，
-具体页面怎么显示、存在哪里，都不是 D 的事。只要格式对得上，前端就不用跟着改。
+具体页面怎么显示、存在哪里、原先是一整段还是逐条消息，都不是 D 的事。
+只要格式对得上，前端和 D 都不用跟着改。
 
 ## POST /analyze
 
-输入：聊天原文
+输入：JSON `text` / `messages` 二选一，或 multipart 的 `text` + `image`。
 
 输出：需求、待确认问题、建议待办、回复草稿
 
-### 请求
+### 请求 A：一整段聊天原文
 
 ```json
 {
@@ -35,6 +36,83 @@
 | text | string | 是 | 前后空白会被忽略，全空白返回 400 |
 
 客户名称放在 `text` 内，不新增单独字段。分析时忽略首尾空白，数据库保留用户提交的完整原始字符串，便于核对。
+
+### 请求 B：逐条消息
+
+```json
+{
+  "messages": [
+    {
+      "speaker": "客户",
+      "content": "我们想定制 100 件文化衫",
+      "time": "10:01"
+    },
+    {
+      "role": "seller",
+      "content": "好的，请问什么时候要？"
+    },
+    "这一条没有写说话人也可以"
+  ]
+}
+```
+
+| 字段 | 类型 | 必填 | 空值规则 |
+| --- | --- | --- | --- |
+| messages | array | 是 | 至少一条；不能是空数组 |
+| messages[] | object \| string | 是 | 字符串会当成一条“未标注”消息 |
+| messages[].speaker | string | 否 | 显示名称，例如“客户”“商家” |
+| messages[].role | string | 否 | 角色，例如 `customer`、`seller` |
+| messages[].content | string | 是 | 前后空白会被去掉，不能为空白 |
+| messages[].time | string | 否 | 消息时间，会保留在整理后的文本里 |
+
+为兼容不同前端，消息对象里的 `content` 也可以写成 `text`，`time` 也可以写成
+`timestamp`；同时存在时优先使用 `content` / `time`。
+
+角色会统一成 `customer`、`seller` 或 `unknown`。常见的中英文写法都能识别，
+例如“客户 / 顾客 / 甲方 / customer / user”会统一成 `customer`，
+“商家 / 卖家 / 乙方 / 客服 / seller / assistant”会统一成 `seller`。
+
+### C 如何整理并交给 D
+
+`backend/main.py` 的 `normalize_analyze_request()` 会把两种请求都整理成一个
+Python 字典，再只把其中的 `text` 交给 `analyze_chat(text)`：
+
+```python
+{
+    "source": "messages",
+    "text": "[10:01 客户] 我们想定制 100 件文化衫\n[商家] 好的，请问什么时候要？\n[未标注] 这一条没有写说话人也可以",
+    "messages": [
+        {"role": "customer", "speaker": "客户", "content": "我们想定制 100 件文化衫", "time": "10:01"},
+        {"role": "seller", "speaker": "商家", "content": "好的，请问什么时候要？", "time": None},
+        {"role": "unknown", "speaker": "未标注", "content": "这一条没有写说话人也可以", "time": None},
+    ],
+    "message_count": 3,
+}
+```
+
+这份整理结果是后端内部数据，不会额外出现在响应里。D 的调用方式保持：
+
+```python
+result = analyze_chat(chat["text"])
+```
+
+有显示姓名且另有明确角色时，模型输入形如 `[客户(张先生)] …`，避免显示姓名遮盖角色。
+原始 JSON 请求另外保存到详情的 `source_input`，包括原始消息内容、姓名和时间。
+消息内容同时提供 `content` 与 `text` 时，严格采用 `content`，空白 `content` 不会回退到另一个字段。
+
+### 请求 C：聊天截图
+
+```bash
+curl -F "text=客户名称：张先生" -F "image=@chat.png" http://127.0.0.1:8000/analyze
+```
+
+- `Content-Type: multipart/form-data`；`image` 必须为图片文件，`text` 为可选字符串，可以为空。
+- 只支持 PNG、JPEG、WebP，最大 10 MiB；校验真实图片格式、完整解码和声明 MIME 一致性，最多 2500 万像素。请求整体上限为 10 MiB + 64 KiB。
+- 不接受客户端直接提交的图片 data URL；必须通过 `image` 文件上传。`source_image` 只由服务端生成，因此具有同一大小限制。
+- C 将经过校验的原始图片字节、MIME 和去除首尾空白的文字传给 D：`analyze_chat_with_source(text, image_bytes, image_mime)`。
+- D 返回内部 `ai_contract.AnalysisOutcome(result, source_text)`，`source_text` 为含客户/商家角色的截图逐字转录，不能代替结构化结果。
+- 保存完整原始文字、原图和截图转录。`record.text` 为原始文字加 `[聊天截图转录]` 段；真实模型的每条 evidence 必须能在该文本找到。截图转录仍需人工对照原图核实。
+- 图片处理在线程池内执行，不阻塞健康检查。模型超时由 D 的本地调用设置，建议不少于 180 秒；失败不生成记录，没有样例回退。
 
 ### 响应
 
@@ -93,6 +171,11 @@ D 的函数可以只返回四个业务字段，未提供的 `is_sample` 默认�
 | 500 | 真实模型引用不在原文中 | `{"detail": "模型返回的原文引用无效，请联系 D 检查"}` |
 | 500 | 数据库读写失败 | `{"detail": "数据库操作失败，请联系 C 检查服务端日志"}` |
 | 500 | 历史记录的结果 JSON 损坏或不是对象 | `{"detail": "历史记录内容损坏，请联系 C 检查服务端日志"}` |
+| 400 | messages 为空数组或单条消息为空 | `{"detail": "聊天消息不能为空"}` 或 `{"detail": "第 1 条消息不能为空"}` |
+| 400 | JSON 无法解析、图片空白或损坏 | 具体中文提示 |
+| 413 | 图片/请求超限或图片像素过多 | 具体中文提示 |
+| 415 | 请求类型不支持、图片格式不支持或 MIME 不一致 | 具体中文提示 |
+| 422 | text/messages 都未传、同时提供或表单字段不符合约定 | 校验错误；JSON 返回错误数组 |
 
 分析阶段失败不会创建记录；保存返回 500 时不得显示保存成功。服务端日志保留异常堆栈和失败阶段，客户端不返回上游内部异常原文。
 前端应读取 `detail` 展示具体原因，422 则可根据字段路径提示；网络连接失败由前端提示检查后端是否启动。
@@ -157,12 +240,11 @@ Content-Type: application/json
 - A/B 需要分别保存当前 `recordId` 和结果草稿：新分析时使用响应的 `id`，历史打开时使用详情顶层的 `id`。仅设置 `result = full.result` 会丢失后续保存所需的编号。
 - A/B 在保存按钮中调用 `saveRecord(recordId, draft)`，等待成功后再提示；刷新后通过详情重新读取，不能只检查页面草稿。
 - 后端导出包含编号、原文、结果和时间，响应带 `Content-Disposition: attachment; filename="record-12.json"`，内容为 UTF-8 JSON。
-- 当前结果面板的导出是前端本地草稿 JSON，与后端完整记录导出的结构不同；最终交互由 A/B 对齐，页面当前尚未接入保存按钮。
+- 图片记录的详情和导出另外包含 `source_input`（原始输入对象）、`source_image`（原图 data URL）和 `source_transcript`（截图转录）。纯文本无图片时分别为原始对象、`null`、`""`。
+- 启动时自动给旧数据库增加这三列，保留旧结果和原文，旧记录的 `source_input` / `source_image` 为 `null`、`source_transcript` 为 `""`。列表摘要保持原有四字段，不携带图片。
 
 ## 当前状态
 
-`ai_service.analyze_chat()` 现在返回**开发样例**（`is_sample: true`）。
-D 接入真实模型后替换实现，以上格式不变。
-
-2026-10-17：C 已补齐结构校验、来源标记保留、错误定位和数据库连接关闭，后端回归测试见 `backend/tests/test_api.py`。
-本文件为可供联调的接口约定；全组确认、页面完整联调和他人复核 PR 后才能视为正式验收完成。
+2026-10-18：C 接口保留远端逐条消息功能，增加截图透传、原图/转录持久化和兼容迁移。
+D 的本地现成文本模型、截图 Qwen 模型和项目适配由 D 维护；C 的测试替身只验证接口边界，不代表真实 AI 业务样例通过。
+完整验收结果由 E 基于全部合并后的真实运行报告确认。

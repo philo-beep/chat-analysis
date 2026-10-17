@@ -1,6 +1,9 @@
 """C 的后端回归测试：只使用临时数据库，不修改 backend/app.db。"""
 
 import copy
+import base64
+import io
+from contextlib import closing
 import json
 import os
 from pathlib import Path
@@ -15,9 +18,11 @@ BACKEND = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BACKEND))
 
 from fastapi.testclient import TestClient
+from PIL import Image
 
 import database
 import main
+from ai_contract import AnalysisOutcome
 
 
 class ApiTests(unittest.TestCase):
@@ -30,6 +35,13 @@ class ApiTests(unittest.TestCase):
         logger_patch = patch.object(main, "logger")
         self.logger = logger_patch.start()
         self.addCleanup(logger_patch.stop)
+        # 接口回归使用固定替身，与 D 的运行模式和真实模型依赖隔离。
+        model_patch = patch.object(main, "analyze_chat", return_value={
+            "requirements": [{"field": "数量", "value": "100 件", "evidence": "开发引用"}],
+            "questions": ["请确认尺码"], "tasks": ["准备方案"], "reply": "收到", "is_sample": True,
+        })
+        model_patch.start()
+        self.addCleanup(model_patch.stop)
         self.client = self.enterContext(TestClient(main.app, raise_server_exceptions=False))
 
     def analyze(self, text="客户甲：我们想定制 100 件文化衫"):
@@ -300,6 +312,146 @@ class ApiTests(unittest.TestCase):
                 )
                 raise RuntimeError("rollback test")
         self.assertEqual(database.list_records(), [])
+
+    def test_messages_preserve_original_and_forward_roles_and_time(self):
+        payload = {"messages": [
+            {"speaker": "张先生", "role": "customer", "content": "  先做100件。  ", "time": "10:01"},
+            {"role": "seller", "text": "可以的。", "timestamp": "10:02"},
+            "数量改成150件",
+        ]}
+        result = {"requirements": [{"field": "数量", "value": "150件", "evidence": "数量改成150件"}],
+                  "questions": [], "tasks": [], "reply": "收到"}
+        with patch.object(main, "analyze_chat", return_value=result) as model:
+            response = self.client.post("/analyze", json=payload)
+        self.assertEqual(response.status_code, 200, response.text)
+        model.assert_called_once_with("[10:01 客户(张先生)] 先做100件。\n[10:02 商家] 可以的。\n[未标注] 数量改成150件")
+        detail = self.client.get(f'/records/{response.json()["id"]}').json()
+        self.assertEqual(detail["source_input"], payload)
+        self.assertEqual(detail["text"], model.call_args.args[0])
+        self.assertEqual(set(response.json()), {"id", "requirements", "questions", "tasks", "reply", "is_sample"})
+
+    def test_messages_invalid_inputs_fail_without_model_call(self):
+        cases = [
+            ({"messages": []}, 400), ({"messages": [" "]}, 400),
+            ({"messages": [{}]}, 400),
+            ({"messages": [{"content": "", "text": "不得回退"}]}, 400),
+            ({"messages": [123]}, 422),
+            ({"messages": [{"content": 123}]}, 422),
+            ({"messages": [{"role": 123, "content": "hello"}]}, 422),
+            ({"text": "hello", "messages": ["hi"]}, 422),
+        ]
+        with patch.object(main, "analyze_chat") as model:
+            for payload, status in cases:
+                with self.subTest(payload=payload):
+                    response = self.client.post("/analyze", json=payload)
+                    self.assertEqual(response.status_code, status, response.text)
+        model.assert_not_called()
+        self.assertEqual(database.list_records(), [])
+
+    @staticmethod
+    def image_bytes(format="PNG"):
+        output = io.BytesIO()
+        Image.new("RGB", (16, 16), "white").save(output, format=format)
+        return output.getvalue()
+
+    def upload(self, image_bytes=None, mime="image/png", text="", filename="chat.png"):
+        return self.client.post("/analyze", data={"text": text}, files={
+            "image": (filename, self.image_bytes() if image_bytes is None else image_bytes, mime),
+        })
+
+    def test_image_forwarded_and_original_transcript_survive_edit_export(self):
+        image_bytes = self.image_bytes()
+        transcript = "客户：数量改成150件。\n商家：收到。"
+        result = {"requirements": [{"field": "数量", "value": "150件", "evidence": "数量改成150件"}],
+                  "questions": [], "tasks": [], "reply": "收到"}
+        original_text = "  客户名称：张先生\n  "
+        with patch.object(main, "analyze_chat_with_source", return_value=AnalysisOutcome(result, transcript)) as model:
+            response = self.upload(image_bytes, text=original_text)
+        self.assertEqual(response.status_code, 200, response.text)
+        model.assert_called_once_with(original_text.strip(), image_bytes, "image/png")
+        self.assertEqual(set(response.json()), {"id", "requirements", "questions", "tasks", "reply", "is_sample"})
+        record_id = response.json()["id"]
+        detail = self.client.get(f"/records/{record_id}").json()
+        self.assertEqual(detail["text"], original_text + "\n\n[聊天截图转录]\n" + transcript)
+        self.assertEqual(detail["source_transcript"], transcript)
+        self.assertEqual(detail["source_input"], {"text": original_text})
+        self.assertEqual(base64.b64decode(detail["source_image"].split(",")[1]), image_bytes)
+        self.assertEqual(self.client.put(f"/records/{record_id}", json={"result": {
+            **result, "reply": "人工修改", "is_sample": True,
+        }}).status_code, 200)
+        exported = self.client.get(f"/records/{record_id}/export").json()
+        for key in ["text", "source_input", "source_image", "source_transcript"]:
+            self.assertEqual(exported[key], detail[key])
+        self.assertEqual(exported["result"]["reply"], "人工修改")
+        self.assertFalse(exported["result"]["is_sample"])
+
+    def test_image_only_jpeg_and_webp_are_valid(self):
+        outcome = AnalysisOutcome({"requirements": [], "questions": [], "tasks": [], "reply": ""}, "客户：想了解文化衫")
+        for format, mime in [("JPEG", "image/jpeg"), ("WEBP", "image/webp")]:
+            with self.subTest(format=format), patch.object(main, "analyze_chat_with_source", return_value=outcome):
+                response = self.upload(self.image_bytes(format), mime, filename="screenshot")
+                self.assertEqual(response.status_code, 200, response.text)
+
+    def test_invalid_images_do_not_call_model_or_save(self):
+        cases = [
+            (b"", "image/png", 400), (b"not an image", "image/png", 400),
+            (self.image_bytes("GIF"), "image/gif", 415),
+            (self.image_bytes(), "image/jpeg", 415),
+            (self.image_bytes()[:30], "image/png", 400),
+            (b"x" * (main.MAX_IMAGE_BYTES + 1), "image/png", 413),
+        ]
+        with patch.object(main, "analyze_chat_with_source") as model:
+            for data, mime, status in cases:
+                with self.subTest(mime=mime, size=len(data)):
+                    response = self.upload(data, mime)
+                    self.assertEqual(response.status_code, status, response.text)
+            with patch.object(main, "MAX_IMAGE_PIXELS", 10):
+                self.assertEqual(self.upload().status_code, 413)
+        model.assert_not_called()
+        self.assertEqual(database.list_records(), [])
+
+    def test_bad_image_model_outcome_or_failure_is_not_saved(self):
+        empty = {"requirements": [], "questions": [], "tasks": [], "reply": ""}
+        outcomes = [None, AnalysisOutcome(empty, " "), AnalysisOutcome({"reply": "bad"}, "客户：你好"),
+                    AnalysisOutcome({**empty, "requirements": [{"field": "预算", "value": "5000元", "evidence": "捏造引用"}]}, "客户：你好")]
+        for outcome in outcomes:
+            with self.subTest(outcome=outcome), patch.object(main, "analyze_chat_with_source", return_value=outcome):
+                response = self.upload()
+                self.assertEqual(response.status_code, 500, response.text)
+        with patch.object(main, "analyze_chat_with_source", side_effect=TimeoutError("private detail")):
+            response = self.upload()
+            self.assertEqual(response.status_code, 500)
+            self.assertIn("超时", response.json()["detail"])
+            self.assertNotIn("private detail", response.text)
+        self.assertEqual(database.list_records(), [])
+
+    def test_bad_transport_returns_friendly_error(self):
+        self.assertEqual(self.client.post("/analyze", content="{bad", headers={"Content-Type": "application/json"}).status_code, 400)
+        self.assertEqual(self.client.post("/analyze", content="hello", headers={"Content-Type": "text/plain"}).status_code, 415)
+        response = self.client.post("/analyze", data={"text": "x", "other": "x"}, files={"image": ("chat.png", self.image_bytes(), "image/png")})
+        self.assertEqual(response.status_code, 422)
+        response = self.client.post("/analyze", files=[
+            ("image", (None, "ignored")),
+            ("image", ("chat.png", self.image_bytes(), "image/png")),
+        ])
+        self.assertEqual(response.status_code, 422)
+
+    def test_old_database_migrates_without_losing_records(self):
+        legacy_path = Path(self.temp_dir.name) / "legacy.db"
+        legacy_result = {"requirements": [], "questions": [], "tasks": [], "reply": "历史结果"}
+        with closing(sqlite3.connect(legacy_path)) as connection, connection:
+            connection.execute("CREATE TABLE records (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL DEFAULT '', text TEXT NOT NULL, result TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)")
+            connection.execute("INSERT INTO records (text,result,created_at,updated_at) VALUES (?,?,?,?)", ("历史原文", json.dumps(legacy_result), "old", "old"))
+        with patch.object(database, "DB_PATH", legacy_path):
+            database.init_db()
+            database.init_db()
+            record = database.get_record(1)
+            self.assertEqual(record["text"], "历史原文")
+            self.assertEqual(record["result"], legacy_result)
+            self.assertIsNone(record["source_input"])
+            self.assertIsNone(record["source_image"])
+            self.assertEqual(record["source_transcript"], "")
+            self.assertEqual(database.save_record("新记录", legacy_result), 2)
 
 
 if __name__ == "__main__":

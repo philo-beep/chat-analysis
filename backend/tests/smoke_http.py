@@ -1,7 +1,8 @@
-"""通过真实 Uvicorn 进程验证 HTTP 链路和服务重启；仅使用临时数据库。"""
+"""真实 Uvicorn + 测试模型替身验证 HTTP 链路/重启；不是 AI 业务验收。"""
 
 from contextlib import contextmanager
 import json
+import io
 import os
 from pathlib import Path
 import socket
@@ -12,48 +13,63 @@ import time
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+import httpx
+from PIL import Image
+
 BACKEND = Path(__file__).resolve().parents[1]
 
 
 @contextmanager
-def server(db_path: Path, log_path: Path):
+def server(db_path: Path):
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
         port = sock.getsockname()[1]
-    bootstrap = (
-        "import sys; from pathlib import Path; import database; "
-        "database.DB_PATH=Path(sys.argv[1]); import uvicorn; "
-        "uvicorn.run('main:app',host='127.0.0.1',port=int(sys.argv[2]),log_level='warning')"
-    )
+    bootstrap = """
+import sys
+from pathlib import Path
+import database
+database.DB_PATH = Path(sys.argv[1])
+import main
+from ai_contract import AnalysisOutcome
+def fixture(text):
+    return {"requirements": [{"field": "数量", "value": "100件", "evidence": "开发引用"}],
+            "questions": ["请确认尺码"], "tasks": ["准备方案"], "reply": "收到", "is_sample": True}
+main.analyze_chat = fixture
+main.analyze_chat_with_source = lambda text, image, mime: AnalysisOutcome(fixture(text), "客户：数量改为150件。")
+import uvicorn
+uvicorn.run(main.app, host="127.0.0.1", port=int(sys.argv[2]), log_level="warning")
+"""
     base = f"http://127.0.0.1:{port}"
-    with log_path.open("w", encoding="utf-8") as log:
-        process = subprocess.Popen(
-            [sys.executable, "-B", "-c", bootstrap, str(db_path), str(port)],
-            cwd=BACKEND, stdout=log, stderr=subprocess.STDOUT,
-            env={**os.environ, "PYTHONIOENCODING": "utf-8"},
-            creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
-        )
+    # 使用管道收集少量测试日志，避免 Windows 后台进程继承具名日志文件句柄。
+    process = subprocess.Popen(
+        [sys.executable, "-B", "-c", bootstrap, str(db_path), str(port)],
+        cwd=BACKEND, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        text=True, encoding="utf-8",
+        env={**os.environ, "PYTHONIOENCODING": "utf-8"},
+        creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
+    )
+    try:
+        for _ in range(100):
+            if process.poll() is not None:
+                output, _ = process.communicate(timeout=10)
+                raise RuntimeError(f"Uvicorn exited: {output}")
+            try:
+                with urlopen(f"{base}/health", timeout=0.5) as response:
+                    assert json.load(response) == {"status": "ok"}
+                break
+            except (URLError, TimeoutError):
+                time.sleep(0.1)
+        else:
+            raise TimeoutError("Uvicorn did not become ready")
+        yield base
+    finally:
+        if process.poll() is None:
+            process.terminate()
         try:
-            for _ in range(100):
-                if process.poll() is not None:
-                    raise RuntimeError(f"Uvicorn exited: {log_path.read_text(encoding='utf-8')}")
-                try:
-                    with urlopen(f"{base}/health", timeout=0.5) as response:
-                        assert json.load(response) == {"status": "ok"}
-                    break
-                except (URLError, TimeoutError):
-                    time.sleep(0.1)
-            else:
-                raise TimeoutError("Uvicorn did not become ready")
-            yield base
-        finally:
-            if process.poll() is None:
-                process.terminate()
-                try:
-                    process.wait(timeout=10)
-                except subprocess.TimeoutExpired:
-                    process.kill()
-                    process.wait(timeout=10)
+            process.communicate(timeout=10)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.communicate(timeout=10)
 
 
 def request(base, method, route, payload=None):
@@ -71,9 +87,8 @@ def request(base, method, route, payload=None):
 def main():
     with tempfile.TemporaryDirectory(prefix="keyoushu-http-test-") as temp:
         db_path = Path(temp) / "smoke.db"
-        log_path = Path(temp) / "server.log"
         text = (BACKEND.parent / "samples/chat-001.txt").read_text(encoding="utf-8")
-        with server(db_path, log_path) as base:
+        with server(db_path) as base:
             assert request(base, "GET", "/health")[:2] == (200, {"status": "ok"})
             status, analyzed, _ = request(base, "POST", "/analyze", {"text": text})
             assert status == 200 and analyzed["is_sample"] is True
@@ -95,11 +110,32 @@ def main():
             assert request(base, "GET", "/records/999999")[0] == 404
             assert request(base, "PUT", f"/records/{record_id}",
                            {"result": {"reply": "missing fields"}})[0] == 422
+            status, message_result, _ = request(base, "POST", "/analyze", {"messages": [
+                {"role": "customer", "content": "先做100件。"},
+                {"role": "seller", "content": "好的。"},
+            ]})
+            assert status == 200
+            status, message_record, _ = request(base, "GET", f'/records/{message_result["id"]}')
+            assert status == 200 and message_record["text"].startswith("[客户]")
+            assert message_record["source_input"]["messages"][1]["role"] == "seller"
+            picture = io.BytesIO()
+            Image.new("RGB", (16, 16), "white").save(picture, format="PNG")
+            response = httpx.post(base + "/analyze", data={"text": "客户名称：张先生"},
+                                  files={"image": ("chat.png", picture.getvalue(), "image/png")}, timeout=10)
+            assert response.status_code == 200, response.text
+            image_id = response.json()["id"]
+            status, image_record, _ = request(base, "GET", f"/records/{image_id}")
+            assert status == 200 and image_record["source_image"].startswith("data:image/png;base64,")
+            assert image_record["source_transcript"] == "客户：数量改为150件。"
             print("PASS: real HTTP health/analyze/list/detail/edit/export, UTF-8, provenance, 400/404/422")
-        with server(db_path, log_path) as base:
+            print("PASS: real HTTP messages + multipart image upload, original image/transcript persisted (model fixtures)")
+        with server(db_path) as base:
             status, reopened, _ = request(base, "GET", f"/records/{record_id}")
             assert status == 200 and reopened["result"]["reply"] == analyzed["reply"]
             assert reopened["result"]["is_sample"] is True
+            status, reopened_image, _ = request(base, "GET", f"/records/{image_id}/export")
+            assert status == 200 and reopened_image["source_image"] == image_record["source_image"]
+            assert reopened_image["source_transcript"] == image_record["source_transcript"]
             print("PASS: Uvicorn process restarted; saved edits and sample flag survived")
         print("PASS: temporary DB only; backend/app.db unchanged")
 

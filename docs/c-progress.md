@@ -1,61 +1,62 @@
-# C 角色交付与运行记录（2026-10-17）
+# C 后端交付与运行记录（2026-10-18）
 
-## 本次范围
+## 范围与冲突处理
 
-基于本地 `codex/backend` 分支、基线提交 `e30215a`，完成 C 负责的接口、数据库和接口约定修补。
-不将 D 的真实模型接入、A/B 的页面保存、E 的浏览器验收标记为完成。
+从本地 main 的 106f47d 创建 codex/backend，合并既有远端 origin/codex/backend 的 d0f493e。
+远端增加逐条 messages 输入，本地已有严格结构校验、错误处理和来源保护，两者在 main.py、docs/api.md 冲突。
+用户确认方案 3 后逐项整合，保留两边功能；未使用覆盖、强制推送或新建远端仓库。
 
-## 已实现
+## 已完成
 
-- 六个接口继续保持原路径：健康检查、分析自动保存、历史列表、详情、修改保存、JSON 导出。
-- 四个业务字段必须完整，需求项的名称、值和依据必须为非空字符串；问题和待办必须为字符串数组，非法请求返回 422。
-- 分析调用使用去掉首尾空白的文本，数据库保留完整原文；空白输入返回 400。
-- 真实模型结果保存前校验结构和引用来源；格式或引用不合法时返回明确错误，不创建记录。开发样例维持显式标记。
-- 编辑结果保留原有 `is_sample`，不能由客户端反转来源；旧记录缺失标记时保持缺失。
-- 区分真实模型未接入、模型超时、模型异常、数据库错误、历史记录损坏；后端日志提供定位信息。
-- 数据库连接在操作后关闭，事务失败回滚；保存时记录消失返回 404。
-- 更新 `docs/api.md` 的请求示例、字段规则、错误返回和前端保存对接方式，补充 README 的测试步骤。
+- 六个接口路径和 /analyze 六个响应字段不变。
+- JSON 保留 text、messages 二选一；保留姓名、角色、时间和字段别名，转交 D 时明确客户/商家角色，另外持久化原始 JSON。
+- 新增 multipart text + image，支持纯截图。PNG/JPEG/WebP 最大 10 MiB、2500 万像素；检查真实图片格式、完整解码、MIME、空文件、重复字段和总请求大小。
+- 图片调用内部 analyze_chat_with_source(text, image_bytes, image_mime)，返回 ai_contract.AnalysisOutcome(result, source_text)；文本仍只调用一次 analyze_chat(str)，与已有调用兼容。
+- 原图 data URL、原始输入、截图角色转录一并保留；record.text 合并原始文字和截图转录，真实结果的 evidence 必须能在其中找到。
+- SQLite 启动迁移增加 source_input、source_image、source_transcript，保留旧记录；历史列表不携带原图。
+- 保留严格结果校验、编号保护、is_sample 服务端来源保护、中文导出、事务回滚、连接关闭和友好错误；失败不创建记录。
+- 模型工作在线程池中执行，文本/截图失败都能返回可重试提示。D 的调用应自行设置本地模型超时，不少于 180 秒以覆盖首次加载。
+- 更新接口文档、启动说明和测试；未修改 ai_service.py 的 D 业务实现。
 
-## 实际运行结果
+## 实测结果
 
-环境：Windows，Python 3.14.7；测试依赖安装在仓库外的临时虚拟环境中。
+Windows，Python 3.14.7。执行依赖安装：
 
-### 后端回归测试
+```powershell
+backend/.venv/Scripts/python.exe -m pip install -r backend/requirements-dev.txt
+```
 
-执行 `python -B -m unittest discover -s backend/tests -v`：**24 项全部通过**。
+当前安装 FastAPI 0.143.3、Starlette 1.8.0、Pydantic 2.14.1、python-multipart 0.0.32、Pillow 13.0.0、httpx 0.28.1。
+Starlette 对 httpx 测试后端给出弃用提示，现有组合仍可运行。只安装运行依赖的环境须先安装 requirements-dev.txt 才能运行测试。
 
-覆盖健康检查、分析保存和读取、修改导出、中文编码、新进程读取磁盘数据、空输入、无效输入、不存在记录、嵌套校验、合法空结果、来源标记、旧记录、模型异常、模型格式错误、引用校验、记录编号保护、原文保留、数据库失败、失败保存和编辑、记录消失、历史数据损坏、CORS、连接关闭和事务回滚。
+### 回归：32 项全部通过
 
-模型返回及故障场景由测试替身注入；该部分证明后端能处理相应场景，不证明真实模型已接入。
-当前安装的 Starlette 对 httpx TestClient 后端给出弃用提示，但不影响本次测试通过。
+```powershell
+backend/.venv/Scripts/python.exe -B -m unittest discover -s backend/tests -v
+```
 
-### 真实 HTTP 与重启测试
+原 24 项回归全部保留，新增消息角色/时间/原始输入、无效消息、图片透传/保存/导出、纯图片 JPEG/WebP、伪造/损坏/超限图片、截图模型失败/错误引用、不合法请求和旧库迁移等检查。
+也在仓库外的 keyoushu-c-review-venv 验证通过。
 
-执行 `python -B backend/tests/smoke_http.py`：**通过**。
+修复测试自身的 Windows 资源问题：迁移测试通过 closing() 显式关闭 SQLite 连接，避免 with sqlite3.connect() 仅提交事务而不关闭连接造成临时文件占用。
 
-脚本在随机本机端口启动真实 Uvicorn，使用仓库 `samples/chat-001.txt` 输入，依次完成：
+### 真实 HTTP 与重启：通过
 
-1. `/health` 返回 200 和正常状态。
-2. `/analyze` 返回 200，创建记录并带 `is_sample: true`。
-3. 历史列表和详情返回已保存数据及完整原文。
-4. PUT 修改数量和中文回复成功；尝试把来源改为真实结果不会生效。
-5. 导出响应包含完整原文、修改后的结果和附件文件名，中文可正确解析。
-6. 空输入返回 400，不存在记录返回 404，不完整保存结果返回 422。
-7. 停止并重新启动 Uvicorn，修改后的中文回复和样例标记仍保留。
+```powershell
+backend/.venv/Scripts/python.exe -B backend/tests/smoke_http.py
+```
 
-回归测试和 HTTP 测试使用临时 SQLite 文件，不向 `backend/app.db` 写入测试记录；测试服务已自动停止。
-`git diff --check` 通过。
+脚本启动真实 Uvicorn，在随机端口执行分析、历史、详情、修改、导出及错误请求，额外执行 messages 与 multipart 图片上传。
+停止并重启服务后，人工修改、来源标记、原图和转录保持一致。
+测试进程通过管道收集日志并 communicate() 清理，避免 Windows 继承具名日志句柄导致临时目录无法删除。
 
-### 当前业务效果
+全部测试使用临时 SQLite，不修改 backend/app.db；测试结束自动停止服务。
+git diff --check 通过，两个冲突文件均无冲突标记。
 
-重新调用 D 的原始分析函数检查 `samples/chat-001.txt`，仍返回开发样例 `is_sample: true`。
-`requirements/questions/tasks/reply` 四个字段均不等于 `samples/expected-001.json`。
-因此本次结果是“后端接口链路通过”，不是“真实 AI 业务验收通过”。
+## 边界和待办
 
-## 尚需协作完成
-
-1. A/B：保留当前记录编号，接入 `saveRecord(recordId, draft)`，展示保存和错误状态，完成浏览器保存刷新流程。
-2. D：实现真实模型调用，使文档业务样例通过，处理数量改口、缺失信息、预算冲突等语义问题。
-3. 全组：确认 `docs/api.md`，对接口约定正式定稿。
-4. E 配合 A/B/C/D：完成三个联调检查点、浏览器验收和干净环境启动验证。
-5. C 的修改仍在本地工作区，尚未提交或推送 GitHub，也未发起 PR；需要另一名技术成员复核和合并后才能关闭该流程任务。
+- 单元测试和真实 HTTP smoke **显式注入模型替身**，证明接口和持久化链路，不证明真实 AI 业务质量。
+- D 继续接入用户桌面的 ai_followup_trainer 文本模型、本地 Qwen 截图模型和项目适配；C 图片桥接会在 D 未实现时友好报错，不回退开发样例。
+- E 在全部分支合并后执行五组真实文本/截图样例、角色识别和浏览器完整验收。
+- 本次按用户流程完成本地提交，**尚未 push**；后续由总控 pull、审查、自检并取得用户确认后推送。
+- 未纳入 .obsidian/workspace.json 或总控负责的 Git 工作流文档。
