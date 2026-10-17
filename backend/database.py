@@ -5,16 +5,28 @@
 
 import json
 import sqlite3
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
+from typing import Iterator
 
 DB_PATH = Path(__file__).parent / "app.db"
 
 
-def _connect() -> sqlite3.Connection:
+class RecordDataError(Exception):
+    """历史记录中的结果不是可读取的 JSON 对象。"""
+
+
+@contextmanager
+def _connect() -> Iterator[sqlite3.Connection]:
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
-    return conn
+    try:
+        with conn:
+            yield conn
+    finally:
+        # sqlite3.Connection 自身的上下文管理器只提交/回滚，不会关闭连接。
+        conn.close()
 
 
 def init_db() -> None:
@@ -64,14 +76,21 @@ def get_record(record_id: int) -> dict | None:
     if row is None:
         return None
     record = dict(row)
-    record["result"] = json.loads(record["result"])
+    try:
+        result = json.loads(record["result"])
+    except (json.JSONDecodeError, TypeError) as exc:
+        raise RecordDataError(f"记录 {record_id} 的结果无法解析") from exc
+    if not isinstance(result, dict):
+        raise RecordDataError(f"记录 {record_id} 的结果不是 JSON 对象")
+    record["result"] = result
     return record
 
 
-def update_result(record_id: int, result: dict) -> None:
+def update_result(record_id: int, result: dict) -> bool:
     now = datetime.now().isoformat(timespec="seconds")
     with _connect() as conn:
-        conn.execute(
+        cur = conn.execute(
             "UPDATE records SET result = ?, updated_at = ? WHERE id = ?",
             (json.dumps(result, ensure_ascii=False), now, record_id),
         )
+        return cur.rowcount > 0

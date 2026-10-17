@@ -64,6 +64,24 @@ npm run dev
 
 **密钥和本地数据库不提交到仓库**，配置模板可以共享。
 
+### 后端回归验证（C）
+
+在项目根目录执行；建议使用单独虚拟环境，避免影响其他项目：
+
+```powershell
+python -m venv .venv-c
+.\.venv-c\Scripts\python.exe -m pip install -r backend/requirements-dev.txt
+.\.venv-c\Scripts\python.exe -B -m unittest discover -s backend/tests -v
+.\.venv-c\Scripts\python.exe -B backend/tests/smoke_http.py
+```
+
+测试使用临时 SQLite 文件，验证五个业务接口、健康检查、中文导出、跨进程读取、非法数据和错误返回，不修改 `backend/app.db`。
+`smoke_http.py` 会在随机本机端口启动真实 Uvicorn，执行完整 HTTP 链路，重启服务并复查已保存修改，结束后自动停止测试服务。
+单元测试中的真实模型、超时等异常使用测试替身注入；它们验证接口边界，不代表 D 已实现真实模型。
+启动服务后可访问 `/health`、`/docs` 检查状态。模型错误、数据库错误和历史记录损坏会在后端日志中区分记录，具体返回和保存示例见 `docs/api.md`。
+
+当前项目仍返回开发样例；结果面板的编辑尚未调用保存接口。真实业务分析由 D 完成，页面保存和浏览器端完整流程由 A/B 配合 C/E 联调后验收。
+
 ## 数据约定
 
 接口：`POST /analyze`，输入聊天原文，输出固定字段的 JSON。详见 [docs/api.md](docs/api.md)。

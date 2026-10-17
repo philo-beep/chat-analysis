@@ -4,6 +4,7 @@ dist/
 __pycache__/
 *.py[cod]
 .venv/
+.venv-c/
 venv/
 
 # 密钥与本地配置（不提交）
