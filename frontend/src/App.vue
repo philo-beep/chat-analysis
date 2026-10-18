@@ -14,6 +14,7 @@ const historyError = ref('')
 const recordId = ref(null)
 const recordsLoading = ref(false)
 const originalText = ref('')
+const sourceImage = ref('')
 const panelBusy = ref(false)
 const lastRecordKey = 'keyoushu.lastRecordId'
 
@@ -25,6 +26,7 @@ function showRecord(record) {
   recordId.value = record.id
   result.value = record.result
   originalText.value = record.text || ''
+  sourceImage.value = record.source_image || ''
   rememberRecord(record.id)
 }
 
@@ -37,11 +39,13 @@ async function handleAnalyze(payload) {
   if (loading.value || panelBusy.value) return
   loading.value = true
   error.value = ''
+  sourceImage.value = ''
   try {
     const response = await analyze(payload)
     recordId.value = response.id ?? null
     result.value = response
     originalText.value = payload.text || ''
+    sourceImage.value = ''
     if (response.id) {
       rememberRecord(response.id)
       // 截图的识别原文保存在详情中，分析响应只包含约定业务字段。
@@ -115,6 +119,7 @@ initialize()
         :result="result"
         :record-id="recordId"
         :original-text="originalText"
+        :source-image="sourceImage"
         :disabled="loading"
         @saved="handleSaved"
         @busy="panelBusy = $event"

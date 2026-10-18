@@ -6,6 +6,7 @@
 
 - `frontend/src/api.js`：FastAPI `detail` 数组按字段路径展示；常见缺失、文字类型、列表、长度等错误使用中文提示，不显示原始对象。字符串业务错误继续直接显示。
 - `frontend/src/App.vue`：历史列表错误单独保存，仅在历史栏显示。刷新历史清理自己的错误，不清除分析失败或记录打开失败。打开失败提示记录编号和服务端原因。
+- 截图原图联动：`showRecord` 读取详情的 `source_image`，经 `source-image` 传给结果面板；新分析开始时清除旧原图，避免混用。实际面板原图展示由 B 的后续提交负责。
 - `frontend/src/components/ChatInput.vue`：只允许 PNG、JPEG、WebP；无 MIME 时按这三类扩展名初筛，实际图片字节仍由后端验真；上限保持 10 MiB。保留客户名称、全部原文、粘贴、预览、快捷键及 `text/image` 契约。
 
 ## 验证结果
