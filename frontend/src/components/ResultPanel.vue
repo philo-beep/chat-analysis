@@ -1,7 +1,7 @@
 <!-- 结果与编辑，B 负责 -->
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { exportRecord, getRecord, saveRecord } from '../api.js'
+import { getRecord, saveRecord } from '../api.js'
 import AppIcon from './AppIcon.vue'
 
 const props = defineProps({
@@ -10,6 +10,8 @@ const props = defineProps({
   originalText: { type: String, default: '' },
   sourceImage: { type: String, default: '' },
   disabled: { type: Boolean, default: false },
+  sessionActive: { type: Boolean, default: true },
+  sessionKey: { type: [String, Number], default: 'default' },
 })
 const emit = defineEmits(['saved', 'busy'])
 const draft = ref(null)
@@ -17,6 +19,7 @@ const savedSnapshot = ref('')
 const busy = ref(false)
 const message = ref('')
 const error = ref('')
+const operationVersion = ref(0)
 const locked = computed(() => busy.value || props.disabled)
 const dirty = computed(() => draft.value && JSON.stringify(draft.value) !== savedSnapshot.value)
 
@@ -26,10 +29,21 @@ function setDraft(value) {
 }
 
 watch(() => [props.result, props.recordId], () => {
-  setDraft(props.result)
+  setDraft(props.sessionActive ? props.result : null)
   message.value = ''
   error.value = ''
 }, { immediate: true })
+
+function clearSessionState() {
+  operationVersion.value += 1
+  draft.value = null
+  savedSnapshot.value = ''
+  message.value = ''
+  error.value = ''
+  if (busy.value) setBusy(false)
+}
+
+watch(() => [props.sessionActive, props.sessionKey], clearSessionState, { flush: 'sync' })
 
 function setBusy(value) {
   busy.value = value
@@ -37,45 +51,61 @@ function setBusy(value) {
 }
 
 function validate() {
+  if (!props.sessionActive) throw new Error('登录状态已失效，请重新登录后打开记录')
+  if (!draft.value) throw new Error('当前没有可操作的分析结果')
   if (!props.recordId) throw new Error('当前结果缺少记录编号，请重新打开历史记录')
   if (draft.value.requirements.some((item) => !item.field.trim() || !item.value.trim() || !item.evidence.trim())) {
     throw new Error('请补全每条需求的字段、值和原文依据，或删除空白需求')
   }
 }
 
-async function persist() {
+function isCurrent(version, recordId) {
+  return props.sessionActive && operationVersion.value === version && props.recordId === recordId
+}
+
+async function persist(version, recordId) {
   validate()
-  await saveRecord(props.recordId, draft.value)
+  await saveRecord(recordId, draft.value)
+  if (!isCurrent(version, recordId)) return false
   // 从服务端重读，确保成功提示对应已持久化的数据。
-  const record = await getRecord(props.recordId)
+  const record = await getRecord(recordId)
+  if (!isCurrent(version, recordId)) return false
   setDraft(record.result)
   emit('saved', record)
+  return true
 }
 
 async function save() {
   if (locked.value) return
   error.value = ''
   message.value = ''
+  const version = ++operationVersion.value
+  const id = props.recordId
   setBusy(true)
   try {
-    await persist()
-    message.value = '已保存，刷新或重新打开历史记录可查看'
+    if (await persist(version, id) && isCurrent(version, id)) {
+      message.value = '已保存，刷新或重新打开历史记录可查看'
+    }
   } catch (e) {
-    error.value = e instanceof Error ? e.message : '保存失败，请重试'
+    if (isCurrent(version, id)) error.value = e instanceof Error ? e.message : '保存失败，请重试'
   } finally {
-    setBusy(false)
+    if (isCurrent(version, id)) setBusy(false)
   }
 }
 
 async function copyReply() {
+  if (locked.value || !props.sessionActive || !draft.value) return
   error.value = ''
   message.value = ''
+  const version = operationVersion.value
   try {
     if (!navigator.clipboard?.writeText) throw new Error('浏览器不支持剪贴板，请手动选择并复制回复草稿')
     await navigator.clipboard.writeText(draft.value.reply)
-    message.value = '回复草稿已复制'
+    if (props.sessionActive && operationVersion.value === version) message.value = '回复草稿已复制'
   } catch (e) {
-    error.value = e instanceof Error ? `复制失败：${e.message}` : '复制失败，请手动复制回复草稿'
+    if (props.sessionActive && operationVersion.value === version) {
+      error.value = e instanceof Error ? `复制失败：${e.message}` : '复制失败，请手动复制回复草稿'
+    }
   }
 }
 
@@ -83,36 +113,38 @@ async function exportJson() {
   if (locked.value) return
   error.value = ''
   message.value = ''
+  const version = ++operationVersion.value
+  const id = props.recordId
   setBusy(true)
   try {
     validate()
-    // 导出后端完整记录；先保存修改，避免下载到旧结果。
-    if (dirty.value) await persist()
-    const response = await fetch(exportRecord(props.recordId))
-    if (!response.ok) {
-      const body = await response.json().catch(() => null)
-      throw new Error(typeof body?.detail === 'string' ? body.detail : `导出失败：${response.status}`)
+    // 导出前先保存，再经 A 的统一详情请求读取完整记录，避免直接 fetch 绕过凭据处理。
+    if (dirty.value && !(await persist(version, id))) return
+    const record = await getRecord(id)
+    if (!isCurrent(version, id)) return
+    if (!record || !record.result) {
+      throw new Error('服务端返回的记录不完整，无法导出')
     }
-    const blob = await response.blob()
+    const blob = new Blob([JSON.stringify(record, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `record-${props.recordId}.json`
+    link.download = `record-${id}.json`
     document.body.appendChild(link)
     link.click()
     link.remove()
     setTimeout(() => URL.revokeObjectURL(url), 1000)
-    message.value = '已生成完整需求单，包含原文、结果和记录信息'
+    if (isCurrent(version, id)) message.value = '已生成完整需求单，包含原文、结果和记录信息'
   } catch (e) {
-    error.value = e instanceof Error ? e.message : '导出失败，请检查后端连接后重试'
+    if (isCurrent(version, id)) error.value = e instanceof Error ? e.message : '导出失败，请检查后端连接后重试'
   } finally {
-    setBusy(false)
+    if (isCurrent(version, id)) setBusy(false)
   }
 }
 </script>
 
 <template>
-  <section v-if="draft" class="result-panel card" aria-label="分析结果编辑面板">
+  <section v-if="draft && sessionActive" class="result-panel card" aria-label="分析结果编辑面板">
     <header class="result-heading"><div class="section-title"><span class="section-icon"><AppIcon name="file" /></span><div><div class="eyebrow">CUSTOMER BRIEF</div><h2>分析结果 <small v-if="recordId">#{{ recordId }}</small></h2></div></div><span class="result-status" :class="{ pending: dirty }"><span></span>{{ dirty ? '有待保存修改' : '已保存至本地' }}</span></header>
     <div class="result-content">
     <p v-if="draft.is_sample === true" class="sample-flag" role="status">
