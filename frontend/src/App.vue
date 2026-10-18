@@ -10,6 +10,7 @@ const records = ref([])
 const result = ref(null)
 const loading = ref(false)
 const error = ref('')
+const historyError = ref('')
 const recordId = ref(null)
 const recordsLoading = ref(false)
 const originalText = ref('')
@@ -60,10 +61,11 @@ async function handleAnalyze(payload) {
 
 async function refreshRecords() {
   recordsLoading.value = true
+  historyError.value = ''
   try {
     records.value = await listRecords()
   } catch (e) {
-    error.value = e instanceof Error ? e.message : '历史记录加载失败'
+    historyError.value = e instanceof Error ? `历史记录加载失败：${e.message}` : '历史记录加载失败，请重试'
   } finally {
     recordsLoading.value = false
   }
@@ -78,7 +80,7 @@ async function openRecord(record) {
     const full = await getRecord(record.id)
     showRecord(full)
   } catch (e) {
-    error.value = e instanceof Error ? e.message : '记录加载失败'
+    error.value = e instanceof Error ? `无法打开记录 #${record.id}：${e.message}` : '记录加载失败，请重试'
   } finally {
     loading.value = false
   }
@@ -100,7 +102,7 @@ initialize()
       <RecordList
         :records="records"
         :loading="recordsLoading || loading || panelBusy"
-        :error="error"
+        :error="historyError"
         @select="openRecord"
         @refresh="refreshRecords"
       />
@@ -108,7 +110,7 @@ initialize()
     <main class="main">
       <h1>客有数 · 客户需求整理</h1>
       <ChatInput :loading="loading || panelBusy" @submit="handleAnalyze" />
-      <p v-if="error" class="error">{{ error }}</p>
+      <p v-if="error" class="error" role="alert">{{ error }}</p>
       <ResultPanel
         :result="result"
         :record-id="recordId"

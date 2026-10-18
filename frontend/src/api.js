@@ -17,6 +17,31 @@ export const MOCK_RESULT = {
   reply: '收到，请再提供一下尺码分布，方便准备方案。',
 }
 
+const fieldNames = {
+  text: '聊天原文', image: '聊天截图', result: '分析结果',
+  requirements: '需求列表', field: '字段名称', value: '需求内容', evidence: '原文依据',
+  questions: '待确认问题', tasks: '建议待办', reply: '回复草稿', is_sample: '来源标记',
+  record_id: '记录编号',
+}
+
+function validationMessage(detail) {
+  return detail.map((item) => {
+    if (!item || typeof item !== 'object') return ''
+    const location = Array.isArray(item.loc) ? item.loc : []
+    const field = location.filter((part) => !['body', 'query', 'path'].includes(part))
+      .map((part) => typeof part === 'number' ? `第 ${part + 1} 项` : fieldNames[part] || String(part))
+      .join(' > ') || '输入内容'
+    const messages = {
+      missing: '请补充此项', string_type: '请填写文字', list_type: '应为列表',
+      bool_type: '应为是或否', int_type: '应为整数', int_parsing: '应为整数',
+      string_too_short: '内容过短，请补充', string_too_long: '内容过长，请缩短',
+      string_pattern_mismatch: '格式不正确，请检查', extra_forbidden: '包含不支持的字段',
+      json_invalid: '数据格式不正确，请重新提交',
+    }
+    return `${field}：${messages[item.type] || (typeof item.msg === 'string' ? item.msg : '格式不正确，请检查')}`
+  }).filter(Boolean).join('；')
+}
+
 async function request(path, options = {}) {
   const headers = new Headers(options.headers || {})
   if (options.body && !(options.body instanceof FormData) && !headers.has('Content-Type')) {
@@ -38,7 +63,8 @@ async function request(path, options = {}) {
     }
   }
   if (!res.ok) {
-    const detail = body && typeof body.detail === 'string' ? body.detail : ''
+    const detail = typeof body?.detail === 'string' ? body.detail
+      : Array.isArray(body?.detail) ? validationMessage(body.detail) : ''
     throw new Error(detail || `请求失败：${res.status} ${res.statusText}`)
   }
   if (contentType.includes('application/json')) return body

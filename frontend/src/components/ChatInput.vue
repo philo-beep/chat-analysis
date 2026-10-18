@@ -18,12 +18,15 @@ const demoText = '客户：我们想定制100件文化衫，总预算3000元，1
 function setImage(file) {
   inputError.value = ''
   if (!file) return
-  if (!file.type.startsWith('image/')) {
-    inputError.value = '请上传 PNG、JPG 等图片格式的聊天截图'
+  const mime = file.type.toLowerCase()
+  const supported = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'].includes(mime)
+    || (!mime && /\.(png|jpe?g|webp)$/i.test(file.name))
+  if (!supported) {
+    inputError.value = '仅支持 PNG、JPEG、WebP 聊天截图，请转换格式后上传'
     return
   }
   if (file.size > 10 * 1024 * 1024) {
-    inputError.value = '图片不能超过 10 MB'
+    inputError.value = '图片不能超过 10 MiB'
     return
   }
   if (imageUrl.value) URL.revokeObjectURL(imageUrl.value)
@@ -117,7 +120,7 @@ function clear() {
     <div class="upload-row">
       <label class="upload-button">
         上传聊天截图
-        <input type="file" accept="image/*" :disabled="props.loading" @change="onFileChange" />
+        <input type="file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" :disabled="props.loading" @change="onFileChange" />
       </label>
       <button v-if="image" type="button" class="file-name" :disabled="props.loading" @click="removeImage">
         {{ image.name }} ×
