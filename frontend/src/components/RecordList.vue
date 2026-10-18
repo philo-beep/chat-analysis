@@ -1,7 +1,9 @@
 <!-- 历史列表，A 负责 -->
 <script setup>
-defineProps({
+const props = defineProps({
   records: { type: Array, default: () => [] },
+  loading: { type: Boolean, default: false },
+  error: { type: String, default: '' },
 })
 
 defineEmits(['select', 'refresh'])
@@ -11,12 +13,16 @@ defineEmits(['select', 'refresh'])
   <section class="record-list">
     <header>
       <h2>历史记录</h2>
-      <button class="ghost" @click="$emit('refresh')">刷新</button>
+      <button class="ghost" :disabled="props.loading" @click="$emit('refresh')">
+        {{ props.loading ? '加载中…' : '刷新' }}
+      </button>
     </header>
-    <p v-if="!records.length" class="empty">还没有记录</p>
+    <p v-if="props.error" class="error" role="alert">{{ props.error }}</p>
+    <p v-else-if="props.loading && !props.records.length" class="empty">正在加载历史记录…</p>
+    <p v-else-if="!props.records.length" class="empty">还没有记录</p>
     <ul>
-      <li v-for="record in records" :key="record.id">
-        <button class="item" @click="$emit('select', record)">
+      <li v-for="record in props.records" :key="record.id">
+        <button class="item" :disabled="props.loading" @click="$emit('select', record)">
           <span class="title">{{ record.title || '未命名' }}</span>
           <span class="time">{{ record.created_at }}</span>
         </button>
@@ -54,5 +60,9 @@ ul {
 .empty {
   color: #6b7280;
   font-size: 14px;
+}
+.error {
+  color: #dc2626;
+  font-size: 13px;
 }
 </style>

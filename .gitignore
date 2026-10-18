@@ -4,6 +4,7 @@ dist/
 __pycache__/
 *.py[cod]
 .venv/
+.venv-c/
 venv/
 
 # 密钥与本地配置（不提交）
@@ -20,6 +21,7 @@ venv/
 # 编辑器与系统文件
 .vscode/
 .idea/
+.obsidian/
 .DS_Store
 Thumbs.db
 

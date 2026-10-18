@@ -60,9 +60,32 @@ npm run dev
 
 ### 配置
 
-复制 `backend/.env.example` 为 `backend/.env`，填入自己的密钥。
+本项目使用本地模型，不调用线上千问 API，也不需要线上千问密钥。D 维护本地文本模型和 Qwen 截图服务的配置；按其配置说明使用本机模型目录和本地服务地址。
 
 **密钥和本地数据库不提交到仓库**，配置模板可以共享。
+
+### 后端回归验证（C）
+
+在项目根目录执行；建议使用单独虚拟环境，避免影响其他项目：
+
+```powershell
+python -m venv .venv-c
+.\.venv-c\Scripts\python.exe -m pip install -r backend/requirements-dev.txt
+.\.venv-c\Scripts\python.exe -B -m unittest discover -s backend/tests -v
+.\.venv-c\Scripts\python.exe -B backend/tests/smoke_http.py
+```
+
+测试使用临时 SQLite 文件，验证六个接口、逐条消息、截图上传、中文导出、兼容迁移、跨进程读取、非法数据和错误返回，不修改 `backend/app.db`。
+`smoke_http.py` 会在随机本机端口启动真实 Uvicorn，执行完整 HTTP 链路，重启服务并复查已保存修改，结束后自动停止测试服务。
+单元测试和 HTTP smoke 均显式注入模型替身，与 D 的模型运行模式隔离；它们验证接口边界，不代表真实 AI 测试样例通过。HTTP 测试另外验证截图 multipart 请求与原图、转录的服务重启持久化。
+启动服务后可访问 `/health`、`/docs` 检查状态。模型错误、数据库错误和历史记录损坏会在后端日志中区分记录，具体返回和保存示例见 `docs/api.md`。
+
+前端已接入编辑保存、历史和服务端导出。真实业务分析由 D 维护，所有代码合并后由 E 执行文档中的文本、截图和浏览器完整流程验收。
+
+### 输入与记录
+
+`POST /analyze` 支持 JSON `text` 或 `messages`（二选一），截图使用 multipart `text` + `image`。PNG、JPEG、WebP 图片最大 10 MiB；后端会检查真实文件内容和像素数。
+原始文字、逐条消息和上传图片均可核对：详情/导出包含原始输入 `source_input`、原图 `source_image` 和截图转录 `source_transcript`。SQLite 启动迁移保留旧记录。完整输入和错误约定见 [docs/api.md](docs/api.md)。
 
 ## 数据约定
 

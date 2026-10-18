@@ -10,58 +10,120 @@ const records = ref([])
 const result = ref(null)
 const loading = ref(false)
 const error = ref('')
+const historyError = ref('')
+const recordId = ref(null)
+const recordsLoading = ref(false)
+const originalText = ref('')
+const sourceImage = ref('')
+const panelBusy = ref(false)
+const lastRecordKey = 'keyoushu.lastRecordId'
 
-async function handleAnalyze(text) {
+function rememberRecord(id) {
+  try { localStorage.setItem(lastRecordKey, String(id)) } catch { /* 隐私模式不影响保存接口 */ }
+}
+
+function showRecord(record) {
+  recordId.value = record.id
+  result.value = record.result
+  originalText.value = record.text || ''
+  sourceImage.value = record.source_image || ''
+  rememberRecord(record.id)
+}
+
+async function handleSaved(record) {
+  showRecord(record)
+  await refreshRecords()
+}
+
+async function handleAnalyze(payload) {
+  if (loading.value || panelBusy.value) return
   loading.value = true
   error.value = ''
+  sourceImage.value = ''
   try {
-    result.value = await analyze(text)
-    records.value = await listRecords()
+    const response = await analyze(payload)
+    recordId.value = response.id ?? null
+    result.value = response
+    originalText.value = payload.text || ''
+    sourceImage.value = ''
+    if (response.id) {
+      rememberRecord(response.id)
+      // 截图的识别原文保存在详情中，分析响应只包含约定业务字段。
+      try {
+        showRecord(await getRecord(response.id))
+      } catch (e) {
+        error.value = `分析已完成，但原文读取失败：${e.message}`
+      }
+    }
+    await refreshRecords()
   } catch (e) {
-    error.value = e.message
+    error.value = e instanceof Error ? e.message : '分析失败，请稍后重试'
   } finally {
     loading.value = false
   }
 }
 
 async function refreshRecords() {
+  recordsLoading.value = true
+  historyError.value = ''
   try {
     records.value = await listRecords()
   } catch (e) {
-    error.value = e.message
+    historyError.value = e instanceof Error ? `历史记录加载失败：${e.message}` : '历史记录加载失败，请重试'
+  } finally {
+    recordsLoading.value = false
   }
 }
 
 // 列表里只有标题和时间，没有 result，所以点开时要按 id 再取一次完整记录。
 async function openRecord(record) {
+  if (loading.value || panelBusy.value) return
   loading.value = true
   error.value = ''
   try {
     const full = await getRecord(record.id)
-    result.value = full.result
+    showRecord(full)
   } catch (e) {
-    error.value = e.message
+    error.value = e instanceof Error ? `无法打开记录 #${record.id}：${e.message}` : '记录加载失败，请重试'
   } finally {
     loading.value = false
   }
 }
 
-refreshRecords()
+async function initialize() {
+  await refreshRecords()
+  let lastId
+  try { lastId = Number(localStorage.getItem(lastRecordKey)) } catch { return }
+  if (Number.isInteger(lastId) && lastId > 0) await openRecord({ id: lastId })
+}
+
+initialize()
 </script>
 
 <template>
   <div class="layout">
     <aside class="sidebar">
-      <RecordList :records="records" @select="openRecord" @refresh="refreshRecords" />
+      <RecordList
+        :records="records"
+        :loading="recordsLoading || loading || panelBusy"
+        :error="historyError"
+        @select="openRecord"
+        @refresh="refreshRecords"
+      />
     </aside>
     <main class="main">
-      <h1>聊天分析</h1>
-      <ChatInput :loading="loading" @submit="handleAnalyze" />
-      <p v-if="error" class="error">{{ error }}</p>
-      <p v-if="result && result.is_sample" class="sample-flag">
-        当前显示的是开发样例，不是真实模型结果
-      </p>
-      <ResultPanel :result="result" />
+      <h1>客有数 · 客户需求整理</h1>
+      <ChatInput :loading="loading || panelBusy" @submit="handleAnalyze" />
+      <p v-if="error" class="error" role="alert">{{ error }}</p>
+      <ResultPanel
+        :result="result"
+        :record-id="recordId"
+        :original-text="originalText"
+        :source-image="sourceImage"
+        :disabled="loading"
+        @saved="handleSaved"
+        @busy="panelBusy = $event"
+      />
     </main>
   </div>
 </template>
