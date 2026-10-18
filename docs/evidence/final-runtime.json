@@ -1,0 +1,15 @@
+{
+  "python": "3.14.7 (tags/v3.14.7:823f032, Aug  5 2026, 10:51:32) [MSC v.1944 64 bit (AMD64)]",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "main": "C:\\Users\\pop\\AppData\\Local\\Temp\\keyoushu-e-final\\backend\\main.py",
+  "database": "C:\\Users\\pop\\AppData\\Local\\Temp\\keyoushu-e-final\\backend\\database.py",
+  "ai_service": "C:\\Users\\pop\\AppData\\Local\\Temp\\keyoushu-e-final\\backend\\ai_service.py",
+  "dependencies": {
+    "fastapi": "0.143.3",
+    "uvicorn": "0.54.0",
+    "pydantic": "2.14.1",
+    "python-multipart": "0.0.32",
+    "Pillow": "13.0.0",
+    "httpx": "0.28.1"
+  }
+}

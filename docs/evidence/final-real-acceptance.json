@@ -1,0 +1,550 @@
+[
+  {
+    "case": "normal",
+    "kind": "text",
+    "seconds": 0.02,
+    "status": 200,
+    "result": {
+      "id": 1,
+      "requirements": [
+        {
+          "field": "品类",
+          "value": "文化衫",
+          "evidence": "我们想定制100件文化衫"
+        },
+        {
+          "field": "数量",
+          "value": "100件",
+          "evidence": "我们想定制100件文化衫"
+        },
+        {
+          "field": "预算",
+          "value": "3000元",
+          "evidence": "总预算3000元"
+        },
+        {
+          "field": "交付时间",
+          "value": "10月30日前",
+          "evidence": "10月30日前收到"
+        },
+        {
+          "field": "设计",
+          "value": "需要商家提供设计",
+          "evidence": "需要你们提供设计"
+        }
+      ],
+      "questions": [
+        "请确认交付日期的具体年份",
+        "请确认尺码分布"
+      ],
+      "tasks": [
+        "根据客户要求准备初步设计方案供确认",
+        "根据已记录需求核算报价，确认后再回复价格",
+        "核实生产与物流可行时间"
+      ],
+      "reply": "收到，已记录品类：文化衫、数量：100件、预算：3000元、交付时间：10月30日前、设计：需要商家提供设计。还需确认：请确认交付日期的具体年份；请确认尺码分布。具体报价和可行交期核实后再与您确认。",
+      "is_sample": false
+    },
+    "checks": {
+      "real_source": true,
+      "quantity": true,
+      "budget": true,
+      "date": true,
+      "design": true,
+      "missing_year": true,
+      "sizes": true,
+      "grounded_evidence": true
+    },
+    "passed": true
+  },
+  {
+    "case": "missing",
+    "kind": "text",
+    "seconds": 0.01,
+    "status": 200,
+    "result": {
+      "id": 2,
+      "requirements": [
+        {
+          "field": "品类",
+          "value": "文化衫",
+          "evidence": "想给公司做一批文化衫"
+        }
+      ],
+      "questions": [
+        "请确认预计数量",
+        "请确认预算范围（总预算或每件预算）",
+        "请确认期望收货时间",
+        "请确认尺码分布",
+        "请确认印制图案及是否需要商家提供设计"
+      ],
+      "tasks": [
+        "根据已记录需求核算报价，确认后再回复价格",
+        "核实生产与物流可行时间"
+      ],
+      "reply": "收到，已记录品类：文化衫。还需确认：请确认预计数量；请确认预算范围（总预算或每件预算）；请确认期望收货时间；请确认尺码分布；请确认印制图案及是否需要商家提供设计。具体报价和可行交期核实后再与您确认。",
+      "is_sample": false
+    },
+    "checks": {
+      "real_source": true,
+      "no_numeric_facts": true,
+      "ask_quantity": true,
+      "ask_budget": true,
+      "ask_date": true,
+      "grounded_evidence": true
+    },
+    "passed": true
+  },
+  {
+    "case": "correction",
+    "kind": "text",
+    "seconds": 0.02,
+    "status": 200,
+    "result": {
+      "id": 3,
+      "requirements": [
+        {
+          "field": "数量",
+          "value": "150件",
+          "evidence": "数量改成150件"
+        }
+      ],
+      "questions": [
+        "请确认预算范围（总预算或每件预算）",
+        "请确认期望收货时间",
+        "请确认尺码分布",
+        "请确认印制图案及是否需要商家提供设计"
+      ],
+      "tasks": [
+        "根据已记录需求核算报价，确认后再回复价格",
+        "核实生产与物流可行时间"
+      ],
+      "reply": "收到，已记录数量：150件。还需确认：请确认预算范围（总预算或每件预算）；请确认期望收货时间；请确认尺码分布；请确认印制图案及是否需要商家提供设计。具体报价和可行交期核实后再与您确认。",
+      "is_sample": false
+    },
+    "checks": {
+      "real_source": true,
+      "final_150": true,
+      "change_evidence": true,
+      "grounded_evidence": true
+    },
+    "passed": true
+  },
+  {
+    "case": "approximate",
+    "kind": "text",
+    "seconds": 0.01,
+    "status": 200,
+    "result": {
+      "id": 4,
+      "requirements": [
+        {
+          "field": "数量",
+          "value": "约100件",
+          "evidence": "大概100件"
+        },
+        {
+          "field": "预算",
+          "value": "3000-4000元",
+          "evidence": "预算三四千"
+        }
+      ],
+      "questions": [
+        "请确认期望收货时间",
+        "请确认尺码分布",
+        "请确认印制图案及是否需要商家提供设计"
+      ],
+      "tasks": [
+        "根据已记录需求核算报价，确认后再回复价格",
+        "核实生产与物流可行时间"
+      ],
+      "reply": "收到，已记录数量：约100件、预算：3000-4000元。还需确认：请确认期望收货时间；请确认尺码分布；请确认印制图案及是否需要商家提供设计。具体报价和可行交期核实后再与您确认。",
+      "is_sample": false
+    },
+    "checks": {
+      "real_source": true,
+      "approx_quantity": true,
+      "budget_range": true,
+      "date_pending": true,
+      "grounded_evidence": true
+    },
+    "passed": true
+  },
+  {
+    "case": "ambiguous",
+    "kind": "text",
+    "seconds": 0.01,
+    "status": 200,
+    "result": {
+      "id": 5,
+      "requirements": [
+        {
+          "field": "预算",
+          "value": "3000元 / 5000元（待确认）",
+          "evidence": "总预算3000元。\n客户：我记得之前说的是5000元吧"
+        }
+      ],
+      "questions": [
+        "请确认最终预算（提到3000元、5000元，尚未明确确认）",
+        "请确认预计数量",
+        "请确认期望收货时间",
+        "请确认尺码分布",
+        "请确认印制图案及是否需要商家提供设计"
+      ],
+      "tasks": [
+        "根据已记录需求核算报价，确认后再回复价格",
+        "核实生产与物流可行时间"
+      ],
+      "reply": "收到，已记录预算：3000元 / 5000元（待确认）。还需确认：请确认最终预算（提到3000元、5000元，尚未明确确认）；请确认预计数量；请确认期望收货时间；请确认尺码分布；请确认印制图案及是否需要商家提供设计。具体报价和可行交期核实后再与您确认。",
+      "is_sample": false
+    },
+    "checks": {
+      "real_source": true,
+      "budget_pending": true,
+      "no_final_budget": true,
+      "grounded_evidence": true
+    },
+    "passed": true
+  },
+  {
+    "case": "roles",
+    "kind": "text",
+    "seconds": 0.02,
+    "status": 200,
+    "result": {
+      "id": 6,
+      "requirements": [
+        {
+          "field": "品类",
+          "value": "文化衫",
+          "evidence": "我们想定制 100 件文化衫"
+        },
+        {
+          "field": "数量",
+          "value": "150件",
+          "evidence": "对了数量从 100 件改为 150 件"
+        },
+        {
+          "field": "交付时间",
+          "value": "下周",
+          "evidence": "下周要用"
+        },
+        {
+          "field": "面料",
+          "value": "纯棉",
+          "evidence": "纯棉就行"
+        },
+        {
+          "field": "单价预算",
+          "value": "40元左右",
+          "evidence": "预算 40 左右一件"
+        }
+      ],
+      "questions": [
+        "请确认“下周”对应的具体收货日期",
+        "请确认尺码分布",
+        "请确认印制图案及是否需要商家提供设计"
+      ],
+      "tasks": [
+        "根据已记录需求核算报价，确认后再回复价格",
+        "核实生产与物流可行时间"
+      ],
+      "reply": "收到，已记录品类：文化衫、数量：150件、交付时间：下周、面料：纯棉、单价预算：40元左右。还需确认：请确认“下周”对应的具体收货日期；请确认尺码分布；请确认印制图案及是否需要商家提供设计。具体报价和可行交期核实后再与您确认。",
+      "is_sample": false
+    },
+    "checks": {
+      "real_source": true,
+      "final_150": true,
+      "cotton": true,
+      "unit_budget": true,
+      "relative_date": true,
+      "date_pending": true,
+      "seller_not_fact": true,
+      "grounded_evidence": true
+    },
+    "passed": true
+  },
+  {
+    "case": "normal",
+    "kind": "image",
+    "seconds": 12.18,
+    "status": 200,
+    "result": {
+      "id": 7,
+      "requirements": [
+        {
+          "field": "品类",
+          "value": "文化衫",
+          "evidence": "我们想定制100件文化衫"
+        },
+        {
+          "field": "数量",
+          "value": "100件",
+          "evidence": "我们想定制100件文化衫"
+        },
+        {
+          "field": "预算",
+          "value": "3000元",
+          "evidence": "总预算3000元"
+        },
+        {
+          "field": "交付时间",
+          "value": "10月30日前",
+          "evidence": "10月30日前收到"
+        },
+        {
+          "field": "设计",
+          "value": "需要商家提供设计",
+          "evidence": "需要你们提供设计"
+        }
+      ],
+      "questions": [
+        "请确认交付日期的具体年份",
+        "请确认尺码分布"
+      ],
+      "tasks": [
+        "根据客户要求准备初步设计方案供确认",
+        "根据已记录需求核算报价，确认后再回复价格",
+        "核实生产与物流可行时间"
+      ],
+      "reply": "收到，已记录品类：文化衫、数量：100件、预算：3000元、交付时间：10月30日前、设计：需要商家提供设计。还需确认：请确认交付日期的具体年份；请确认尺码分布。具体报价和可行交期核实后再与您确认。",
+      "is_sample": false
+    },
+    "transcript": "客户：我们想定制100件文化衫，总预算3000元，10月30日前收到，需要你们提供设计。",
+    "checks": {
+      "real_source": true,
+      "quantity": true,
+      "budget": true,
+      "date": true,
+      "design": true,
+      "missing_year": true,
+      "sizes": true,
+      "grounded_evidence": true,
+      "source_image_retained": true,
+      "transcript_retained": true
+    },
+    "passed": true
+  },
+  {
+    "case": "missing",
+    "kind": "image",
+    "seconds": 2.82,
+    "status": 200,
+    "result": {
+      "id": 8,
+      "requirements": [
+        {
+          "field": "品类",
+          "value": "文化衫",
+          "evidence": "想给公司做一批文化衫"
+        }
+      ],
+      "questions": [
+        "请确认预计数量",
+        "请确认预算范围（总预算或每件预算）",
+        "请确认期望收货时间",
+        "请确认尺码分布",
+        "请确认印制图案及是否需要商家提供设计"
+      ],
+      "tasks": [
+        "根据已记录需求核算报价，确认后再回复价格",
+        "核实生产与物流可行时间"
+      ],
+      "reply": "收到，已记录品类：文化衫。还需确认：请确认预计数量；请确认预算范围（总预算或每件预算）；请确认期望收货时间；请确认尺码分布；请确认印制图案及是否需要商家提供设计。具体报价和可行交期核实后再与您确认。",
+      "is_sample": false
+    },
+    "transcript": "文化衫定制聊天\n客户：想给公司做一批文化衫，能介绍一下吗？",
+    "checks": {
+      "real_source": true,
+      "no_numeric_facts": true,
+      "ask_quantity": true,
+      "ask_budget": true,
+      "ask_date": true,
+      "grounded_evidence": true,
+      "source_image_retained": true,
+      "transcript_retained": true
+    },
+    "passed": true
+  },
+  {
+    "case": "correction",
+    "kind": "image",
+    "seconds": 3.07,
+    "status": 200,
+    "result": {
+      "id": 9,
+      "requirements": [
+        {
+          "field": "数量",
+          "value": "150件",
+          "evidence": "数量改成150件"
+        }
+      ],
+      "questions": [
+        "请确认预算范围（总预算或每件预算）",
+        "请确认期望收货时间",
+        "请确认尺码分布",
+        "请确认印制图案及是否需要商家提供设计"
+      ],
+      "tasks": [
+        "根据已记录需求核算报价，确认后再回复价格",
+        "核实生产与物流可行时间"
+      ],
+      "reply": "收到，已记录数量：150件。还需确认：请确认预算范围（总预算或每件预算）；请确认期望收货时间；请确认尺码分布；请确认印制图案及是否需要商家提供设计。具体报价和可行交期核实后再与您确认。",
+      "is_sample": false
+    },
+    "transcript": "客户：先做100件。\n客户：数量改成150件，其他要求后面再说。",
+    "checks": {
+      "real_source": true,
+      "final_150": true,
+      "change_evidence": true,
+      "grounded_evidence": true,
+      "source_image_retained": true,
+      "transcript_retained": true
+    },
+    "passed": true
+  },
+  {
+    "case": "approximate",
+    "kind": "image",
+    "seconds": 2.95,
+    "status": 200,
+    "result": {
+      "id": 10,
+      "requirements": [
+        {
+          "field": "数量",
+          "value": "约100件",
+          "evidence": "大概100件"
+        },
+        {
+          "field": "预算",
+          "value": "3000-4000元",
+          "evidence": "预算三四千"
+        }
+      ],
+      "questions": [
+        "请确认期望收货时间",
+        "请确认尺码分布",
+        "请确认印制图案及是否需要商家提供设计"
+      ],
+      "tasks": [
+        "根据已记录需求核算报价，确认后再回复价格",
+        "核实生产与物流可行时间"
+      ],
+      "reply": "收到，已记录数量：约100件、预算：3000-4000元。还需确认：请确认期望收货时间；请确认尺码分布；请确认印制图案及是否需要商家提供设计。具体报价和可行交期核实后再与您确认。",
+      "is_sample": false
+    },
+    "transcript": "客户：大概100件，预算三四千，时间还没定。",
+    "checks": {
+      "real_source": true,
+      "approx_quantity": true,
+      "budget_range": true,
+      "date_pending": true,
+      "grounded_evidence": true,
+      "source_image_retained": true,
+      "transcript_retained": true
+    },
+    "passed": true
+  },
+  {
+    "case": "ambiguous",
+    "kind": "image",
+    "seconds": 3.21,
+    "status": 200,
+    "result": {
+      "id": 11,
+      "requirements": [
+        {
+          "field": "预算",
+          "value": "3000元 / 5000元（待确认）",
+          "evidence": "总预算3000元。\n客户：我记得之前说的是5000元吧"
+        }
+      ],
+      "questions": [
+        "请确认最终预算（提到3000元、5000元，尚未明确确认）",
+        "请确认预计数量",
+        "请确认期望收货时间",
+        "请确认尺码分布",
+        "请确认印制图案及是否需要商家提供设计"
+      ],
+      "tasks": [
+        "根据已记录需求核算报价，确认后再回复价格",
+        "核实生产与物流可行时间"
+      ],
+      "reply": "收到，已记录预算：3000元 / 5000元（待确认）。还需确认：请确认最终预算（提到3000元、5000元，尚未明确确认）；请确认预计数量；请确认期望收货时间；请确认尺码分布；请确认印制图案及是否需要商家提供设计。具体报价和可行交期核实后再与您确认。",
+      "is_sample": false
+    },
+    "transcript": "客户：总预算3000元。\n客户：我记得之前说的是5000元吧。",
+    "checks": {
+      "real_source": true,
+      "budget_pending": true,
+      "no_final_budget": true,
+      "grounded_evidence": true,
+      "source_image_retained": true,
+      "transcript_retained": true
+    },
+    "passed": true
+  },
+  {
+    "case": "roles",
+    "kind": "image",
+    "seconds": 4.7,
+    "status": 200,
+    "result": {
+      "id": 12,
+      "requirements": [
+        {
+          "field": "品类",
+          "value": "文化衫",
+          "evidence": "我们想定制 100 件文化衫"
+        },
+        {
+          "field": "数量",
+          "value": "150件",
+          "evidence": "对了数量从 100 件改为 150 件"
+        },
+        {
+          "field": "交付时间",
+          "value": "下周",
+          "evidence": "下周要用"
+        },
+        {
+          "field": "面料",
+          "value": "纯棉",
+          "evidence": "纯棉就行"
+        },
+        {
+          "field": "单价预算",
+          "value": "40元左右",
+          "evidence": "预算 40 左右一件"
+        }
+      ],
+      "questions": [
+        "请确认“下周”对应的具体收货日期",
+        "请确认尺码分布",
+        "请确认印制图案及是否需要商家提供设计"
+      ],
+      "tasks": [
+        "根据已记录需求核算报价，确认后再回复价格",
+        "核实生产与物流可行时间"
+      ],
+      "reply": "收到，已记录品类：文化衫、数量：150件、交付时间：下周、面料：纯棉、单价预算：40元左右。还需确认：请确认“下周”对应的具体收货日期；请确认尺码分布；请确认印制图案及是否需要商家提供设计。具体报价和可行交期核实后再与您确认。",
+      "is_sample": false
+    },
+    "transcript": "文化衫定制聊天\n\n甲方：我们想定制 100 件文化衫，下周要用。\n\n乙方：好的，请问用哪种面料？大概什么价位？\n\n甲方：纯棉就行，预算 40 左右一件。对了数量从 100 件改为 150 件。\n\n乙方：收到，我准备一下初步方案。",
+    "checks": {
+      "real_source": true,
+      "final_150": true,
+      "cotton": true,
+      "unit_budget": true,
+      "relative_date": true,
+      "date_pending": true,
+      "seller_not_fact": true,
+      "grounded_evidence": true,
+      "source_image_retained": true,
+      "transcript_retained": true
+    },
+    "passed": true
+  }
+]

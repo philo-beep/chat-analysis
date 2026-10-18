@@ -1,0 +1,258 @@
+{
+  "root": "C:\\Users\\pop\\AppData\\Local\\Temp\\keyoushu-e-final",
+  "db": "C:\\Users\\pop\\AppData\\Local\\Temp\\keyoushu-e-browser-8UC9hW\\browser.db",
+  "ports": [
+    18000,
+    15173
+  ],
+  "events": [
+    {
+      "name": "empty input validation",
+      "at": "2026-10-18T01:03:34.229Z"
+    },
+    {
+      "name": "demo shortcut and real text analysis",
+      "at": "2026-10-18T01:03:34.514Z",
+      "id": 1,
+      "is_sample": false
+    },
+    {
+      "name": "edit save reload history clipboard dirty export",
+      "at": "2026-10-18T01:03:35.201Z",
+      "id": 1,
+      "filename": "record-1.json"
+    },
+    {
+      "name": "real backend model failure displayed; input retained",
+      "at": "2026-10-18T01:03:38.485Z",
+      "injection": "FOLLOWUP_MODEL_PATH set to nonexistent file; no model substitute"
+    },
+    {
+      "name": "same input retry after model configuration recovery",
+      "at": "2026-10-18T01:03:40.191Z",
+      "id": 2
+    },
+    {
+      "name": "backend offline network error visible",
+      "at": "2026-10-18T01:03:40.238Z"
+    },
+    {
+      "name": "actual 422 readable field message and independent history failure recovery",
+      "at": "2026-10-18T01:03:43.596Z",
+      "injection": "POST body deliberately changed to text:number for real 422; GET list 500 response injected"
+    },
+    {
+      "name": "real image upload loading role extraction exact original image and transcript",
+      "at": "2026-10-18T01:03:46.051Z",
+      "id": 3,
+      "seconds": 2.416
+    },
+    {
+      "name": "image edit save and backend restart persist original image; history switch clears old image; image export complete",
+      "at": "2026-10-18T01:03:48.016Z"
+    },
+    {
+      "name": "development sample banner",
+      "at": "2026-10-18T01:03:48.324Z",
+      "injection": "GET detail response flag only; not real model output"
+    },
+    {
+      "name": "mobile layout measured",
+      "at": "2026-10-18T01:03:48.561Z",
+      "viewport": 390,
+      "document": 732
+    },
+    {
+      "name": "no uncaught browser pageerror",
+      "at": "2026-10-18T01:03:48.561Z"
+    }
+  ],
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/records",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/analyze",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/records/1",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/records",
+      "status": 200
+    },
+    {
+      "method": "PUT",
+      "path": "/records/1",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/records/1",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/records",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/records",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/records/1",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/records/1",
+      "status": 200
+    },
+    {
+      "method": "PUT",
+      "path": "/records/1",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/records/1",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/records",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/records/1/export",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/analyze",
+      "status": 500
+    },
+    {
+      "method": "POST",
+      "path": "/analyze",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/records/2",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/records",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/analyze",
+      "status": 422
+    },
+    {
+      "method": "GET",
+      "path": "/records",
+      "status": 500
+    },
+    {
+      "method": "GET",
+      "path": "/records",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/analyze",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/records/3",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/records",
+      "status": 200
+    },
+    {
+      "method": "PUT",
+      "path": "/records/3",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/records/3",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/records",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/records",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/records/3",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/records/1",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/records/3",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/records/3/export",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/records",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/records/3",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/records",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/records/3",
+      "status": 200
+    }
+  ],
+  "errors": [],
+  "logs": {
+    "backend": "INFO:     Started server process [70704]\r\nINFO:     Waiting for application startup.\r\nINFO:     Application startup complete.\r\nINFO:     Uvicorn running on http://127.0.0.1:18000 (Press CTRL+C to quit)\r\nINFO:     127.0.0.1:57243 - \"GET /health HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:58967 - \"GET /records HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:58967 - \"OPTIONS /analyze HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:58967 - \"POST /analyze HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:58967 - \"GET /records/1 HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:58967 - \"GET /records HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:58967 - \"OPTIONS /records/1 HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:58967 - \"PUT /records/1 HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:58967 - \"GET /records/1 HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:58967 - \"GET /records HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:58967 - \"GET /records HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:58967 - \"GET /records/1 HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:58967 - \"GET /records/1 HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:58967 - \"PUT /records/1 HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:58967 - \"GET /records/1 HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:58967 - \"GET /records HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:55891 - \"GET /records/1/export HTTP/1.1\" 200 OK\r\nINFO:     Started server process [58624]\r\nINFO:     Waiting for application startup.\r\nINFO:     Application startup complete.\r\nINFO:     Uvicorn running on http://127.0.0.1:18000 (Press CTRL+C to quit)\r\nINFO:     127.0.0.1:59376 - \"GET /health HTTP/1.1\" 200 OK\r\n模型调用失败\r\nTraceback (most recent call last):\r\n  File \"C:\\Users\\pop\\AppData\\Local\\Temp\\keyoushu-e-final\\backend\\main.py\", line 301, in _analyze_and_save\r\n    raw_result = analyze_chat(model_text)\r\n  File \"C:\\Users\\pop\\AppData\\Local\\Temp\\keyoushu-e-final\\backend\\ai_service.py\", line 52, in analyze_chat\r\n    return analyze(text, _load_model())\r\n                         ~~~~~~~~~~~^^\r\n  File \"C:\\Users\\pop\\AppData\\Local\\Temp\\keyoushu-e-final\\backend\\ai_service.py\", line 39, in _load_model\r\n    stat = path.stat()\r\n  File \"C:\\Users\\pop\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\pathlib\\__init__.py\", line 654, in stat\r\n    return os.stat(self, follow_symlinks=follow_symlinks)\r\n           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\r\nFileNotFoundError: [WinError 2] 系统找不到指定的文件。: 'C:\\\\Users\\\\pop\\\\AppData\\\\Local\\\\Temp\\\\keyoushu-e-browser-8UC9hW\\\\intentionally-missing-model.json'\r\nINFO:     127.0.0.1:59118 - \"POST /analyze HTTP/1.1\" 500 Internal Server Error\r\nINFO:     Started server process [58084]\r\nINFO:     Waiting for application startup.\r\nINFO:     Application startup complete.\r\nINFO:     Uvicorn running on http://127.0.0.1:18000 (Press CTRL+C to quit)\r\nINFO:     127.0.0.1:59132 - \"GET /health HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:65402 - \"POST /analyze HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:65402 - \"GET /records/2 HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:65402 - \"GET /records HTTP/1.1\" 200 OK\r\nINFO:     Started server process [60172]\r\nINFO:     Waiting for application startup.\r\nINFO:     Application startup complete.\r\nINFO:     Uvicorn running on http://127.0.0.1:18000 (Press CTRL+C to quit)\r\nINFO:     127.0.0.1:64577 - \"GET /health HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:54916 - \"POST /analyze HTTP/1.1\" 422 Unprocessable Content\r\nINFO:     127.0.0.1:54916 - \"GET /records HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:54916 - \"POST /analyze HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:54916 - \"GET /records/3 HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:54916 - \"GET /records HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:64577 - \"GET /records/3 HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:54916 - \"OPTIONS /records/3 HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:54916 - \"PUT /records/3 HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:54916 - \"GET /records/3 HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:54916 - \"GET /records HTTP/1.1\" 200 OK\r\nINFO:     Started server process [66300]\r\nINFO:     Waiting for application startup.\r\nINFO:     Application startup complete.\r\nINFO:     Uvicorn running on http://127.0.0.1:18000 (Press CTRL+C to quit)\r\nINFO:     127.0.0.1:54934 - \"GET /health HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:60565 - \"GET /records HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:60565 - \"GET /records/3 HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:60565 - \"GET /records/1 HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:60565 - \"GET /records/3 HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:60565 - \"GET /records/3/export HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:60565 - \"GET /records HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:63970 - \"GET /records/3 HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:60565 - \"GET /records HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:60565 - \"GET /records/3 HTTP/1.1\" 200 OK\r\n",
+    "frontend": "\n  VITE v5.4.21  ready in 625 ms\n\n  ➜  Local:   http://127.0.0.1:15173/\n"
+  },
+  "servicesStopped": true
+}
