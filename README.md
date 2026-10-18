@@ -62,6 +62,10 @@ npm run dev
 
 本项目使用本地模型，不调用线上千问 API，也不需要线上千问密钥。D 维护本地文本模型和 Qwen 截图服务的配置；按其配置说明使用本机模型目录和本地服务地址。
 
+文本分析使用仓库附带、来自用户 `ai_followup_trainer` 的字符 n-gram NB 模型及项目规则适配层，不需要启动大模型。截图需要先启动本机 Ollama，并确认 `ollama list` 含 `qwen2.5vl:7b`；默认服务地址为 `http://127.0.0.1:11434`。可将 `backend/.env.example` 复制为 `backend/.env` 修改本机配置，修改后重启后端。
+
+这次适配未执行 Qwen LoRA 训练。截图由本地 Qwen 逐字转录，再交给相同文本分析流程；页面保留原图和转录供核对。首次加载及截图识别耗时明显高于文本，等待期间页面会显示加载状态。配置、模型来源及适用边界见 [docs/local-model.md](docs/local-model.md)。
+
 **密钥和本地数据库不提交到仓库**，配置模板可以共享。
 
 ### 后端回归验证（C）
@@ -81,6 +85,14 @@ python -m venv .venv-c
 启动服务后可访问 `/health`、`/docs` 检查状态。模型错误、数据库错误和历史记录损坏会在后端日志中区分记录，具体返回和保存示例见 `docs/api.md`。
 
 前端已接入编辑保存、历史和服务端导出。真实业务分析由 D 维护，所有代码合并后由 E 执行文档中的文本、截图和浏览器完整流程验收。
+
+真实模型验收（使用临时数据库，`--images` 会实际调用本地 Qwen，不注入模型替身）：
+
+```powershell
+backend/.venv/Scripts/python.exe -B backend/tests/check_acceptance.py --images --output "$env:TEMP/keyoushu-acceptance.json"
+```
+
+输入和合成截图位于 `samples/acceptance-cases.json` 与 `samples/screenshots/`；检查结果与实际转录写入指定 JSON，任一检查失败时退出码为 1。
 
 ### 输入与记录
 
