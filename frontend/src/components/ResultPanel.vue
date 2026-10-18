@@ -7,6 +7,7 @@ const props = defineProps({
   result: { type: Object, default: null },
   recordId: { type: Number, default: null },
   originalText: { type: String, default: '' },
+  sourceImage: { type: String, default: '' },
   disabled: { type: Boolean, default: false },
 })
 const emit = defineEmits(['saved', 'busy'])
@@ -118,6 +119,10 @@ async function exportJson() {
     <p v-else-if="draft.is_sample !== false" class="hint">旧记录未标注分析来源，请核对原文。</p>
     <details open class="original">
       <summary>原始聊天记录（用于核对依据）</summary>
+      <figure v-if="sourceImage" class="source-image">
+        <img :src="sourceImage" alt="此记录上传的原始聊天截图，可与下方识别文字核对" />
+        <figcaption>原始聊天截图</figcaption>
+      </figure>
       <pre>{{ originalText || '暂无可核对的文字原文；截图解析完成后可在此查看识别文本。' }}</pre>
     </details>
 
@@ -182,6 +187,9 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 .sample-flag { padding: 12px; border: 2px solid #f59e0b; background: #fffbeb; color: #92400e; border-radius: 6px; font-weight: 600; }
 .original { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px; }
 summary { cursor: pointer; }
+.source-image { margin: 12px 0; }
+.source-image img { display: block; max-width: 100%; max-height: 480px; width: auto; height: auto; object-fit: contain; }
+.source-image figcaption { margin-top: 6px; color: #64748b; font-size: 14px; }
 pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; line-height: 1.6; }
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; min-width: 560px; }
