@@ -1,0 +1,25 @@
+{
+  "root": "C:\\Users\\pop\\AppData\\Local\\Temp\\keyoushu-e-final",
+  "db": "C:\\Users\\pop\\AppData\\Local\\Temp\\keyoushu-e-browser-6a6zcJ\\browser.db",
+  "ports": [
+    18000,
+    15173
+  ],
+  "events": [
+    {
+      "name": "empty input validation",
+      "at": "2026-10-18T00:59:40.882Z"
+    },
+    {
+      "name": "FAILED",
+      "error": "page.waitForResponse: Timeout 15000ms exceeded while waiting for event \"response\"\n    at C:\\Users\\pop\\AppData\\Local\\Temp\\keyoushu-e-final\\docs\\evidence\\final-browser-check.mjs:84:32"
+    }
+  ],
+  "requests": [],
+  "errors": [],
+  "logs": {
+    "backend": "INFO:     Started server process [68748]\r\nINFO:     Waiting for application startup.\r\nINFO:     Application startup complete.\r\nINFO:     Uvicorn running on http://127.0.0.1:18000 (Press CTRL+C to quit)\r\nINFO:     127.0.0.1:64143 - \"GET /health HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:62828 - \"GET /records HTTP/1.1\" 200 OK\r\nINFO:     127.0.0.1:62828 - \"OPTIONS /analyze HTTP/1.1\" 400 Bad Request\r\n",
+    "frontend": "\n  VITE v5.4.21  ready in 611 ms\n\n  ➜  Local:   http://127.0.0.1:15173/\n"
+  },
+  "servicesStopped": true
+}

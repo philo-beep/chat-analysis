@@ -1,0 +1,4 @@
+PASS: real HTTP health/analyze/list/detail/edit/export, UTF-8, provenance, 400/404/422
+PASS: real HTTP messages + multipart image upload, original image/transcript persisted (model fixtures)
+PASS: Uvicorn process restarted; saved edits and sample flag survived
+PASS: temporary DB only; backend/app.db unchanged

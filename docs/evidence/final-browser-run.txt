@@ -1,0 +1,12 @@
+PASS empty input validation
+PASS demo shortcut and real text analysis
+PASS edit save reload history clipboard dirty export
+PASS real backend model failure displayed; input retained
+PASS same input retry after model configuration recovery
+PASS backend offline network error visible
+PASS actual 422 readable field message and independent history failure recovery
+PASS real image upload loading role extraction exact original image and transcript
+PASS image edit save and backend restart persist original image; history switch clears old image; image export complete
+PASS development sample banner
+PASS mobile layout measured
+PASS no uncaught browser pageerror

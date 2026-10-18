@@ -1,0 +1,70 @@
+C:\Users\pop\Desktop\��è��Ŀ\backend\.venv\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+  from starlette.testclient import TestClient as TestClient  # noqa
+test_approximate_and_range (test_ai_service.AnalysisTests.test_approximate_and_range) ... ok
+test_clear_budget_change (test_ai_service.AnalysisTests.test_clear_budget_change) ... ok
+test_config_read_after_import_and_missing_model_fails (test_ai_service.AnalysisTests.test_config_read_after_import_and_missing_model_fails) ... ok
+test_conflict_not_latest_wins (test_ai_service.AnalysisTests.test_conflict_not_latest_wins) ... ok
+test_corrections_with_unseen_values (test_ai_service.AnalysisTests.test_corrections_with_unseen_values) ... ok
+test_customer_supplies_design_no_merchant_design_task (test_ai_service.AnalysisTests.test_customer_supplies_design_no_merchant_design_task) ... ok
+test_empty_input_fails (test_ai_service.AnalysisTests.test_empty_input_fails) ... ok
+test_missing_facts (test_ai_service.AnalysisTests.test_missing_facts) ... ok
+test_negative_category (test_ai_service.AnalysisTests.test_negative_category) ... ok
+test_negative_quantity_and_design (test_ai_service.AnalysisTests.test_negative_quantity_and_design) ... ok
+test_normal_year_not_invented (test_ai_service.AnalysisTests.test_normal_year_not_invented) ... ok
+test_numeric_ranges_are_not_single_values (test_ai_service.AnalysisTests.test_numeric_ranges_are_not_single_values) ... ok
+test_original_classifier_is_called (test_ai_service.AnalysisTests.test_original_classifier_is_called) ... ok
+test_previous_order_not_current_facts (test_ai_service.AnalysisTests.test_previous_order_not_current_facts) ... ok
+test_question_is_not_confirmed_quantity (test_ai_service.AnalysisTests.test_question_is_not_confirmed_quantity) ... ok
+test_quote_is_not_customer_budget (test_ai_service.AnalysisTests.test_quote_is_not_customer_budget) ... ok
+test_roles_unit_budget_relative_time (test_ai_service.AnalysisTests.test_roles_unit_budget_relative_time) ... ok
+test_screenshot_title_is_not_customer_evidence (test_ai_service.AnalysisTests.test_screenshot_title_is_not_customer_evidence) ... ok
+test_seller_is_not_customer (test_ai_service.AnalysisTests.test_seller_is_not_customer) ... ok
+test_shipping_and_deposit_are_not_budget (test_ai_service.AnalysisTests.test_shipping_and_deposit_are_not_budget) ... ok
+test_unit_price_does_not_create_quantity (test_ai_service.AnalysisTests.test_unit_price_does_not_create_quantity) ... ok
+test_unknown_speaker_is_not_customer (test_ai_service.AnalysisTests.test_unknown_speaker_is_not_customer) ... ok
+test_blank_and_malformed_transcripts_fail (test_ai_service.VisionTests.test_blank_and_malformed_transcripts_fail) ... ok
+test_cloud_model_rejected (test_ai_service.VisionTests.test_cloud_model_rejected) ... ok
+test_combines_transcript_but_returns_only_transcript (test_ai_service.VisionTests.test_combines_transcript_but_returns_only_transcript) ... ok
+test_lock_wait_is_bounded (test_ai_service.VisionTests.test_lock_wait_is_bounded) ... ok
+test_remote_endpoint_rejected (test_ai_service.VisionTests.test_remote_endpoint_rejected) ... ok
+test_transport_disables_proxies_and_redirects (test_ai_service.VisionTests.test_transport_disables_proxies_and_redirects) ... ok
+test_truncated_response_rejected (test_ai_service.VisionTests.test_truncated_response_rejected) ... ok
+test_unknown_screenshot_roles_require_confirmation (test_ai_service.VisionTests.test_unknown_screenshot_roles_require_confirmation) ... ok
+test_vision_failure_never_falls_back (test_ai_service.VisionTests.test_vision_failure_never_falls_back) ... ok
+test_bad_image_model_outcome_or_failure_is_not_saved (test_api.ApiTests.test_bad_image_model_outcome_or_failure_is_not_saved) ... ok
+test_bad_transport_returns_friendly_error (test_api.ApiTests.test_bad_transport_returns_friendly_error) ... ok
+test_blank_input_rejected_without_saving (test_api.ApiTests.test_blank_input_rejected_without_saving) ... ok
+test_corrupt_record_has_clear_error (test_api.ApiTests.test_corrupt_record_has_clear_error) ... ok
+test_cors_allows_local_frontend (test_api.ApiTests.test_cors_allows_local_frontend) ... ok
+test_data_survives_a_new_python_process (test_api.ApiTests.test_data_survives_a_new_python_process) ... ok
+test_database_connection_is_closed (test_api.ApiTests.test_database_connection_is_closed) ... ok
+test_database_errors_return_diagnostic_json (test_api.ApiTests.test_database_errors_return_diagnostic_json) ... ok
+test_empty_arrays_and_reply_are_valid (test_api.ApiTests.test_empty_arrays_and_reply_are_valid) ... ok
+test_failed_edit_keeps_previous_result (test_api.ApiTests.test_failed_edit_keeps_previous_result) ... ok
+test_failed_save_does_not_report_success (test_api.ApiTests.test_failed_save_does_not_report_success) ... ok
+test_failed_transaction_is_rolled_back (test_api.ApiTests.test_failed_transaction_is_rolled_back) ... ok
+test_full_save_read_edit_export_chain (test_api.ApiTests.test_full_save_read_edit_export_chain) ... ok
+test_health (test_api.ApiTests.test_health) ... ok
+test_image_forwarded_and_original_transcript_survive_edit_export (test_api.ApiTests.test_image_forwarded_and_original_transcript_survive_edit_export) ... ok
+test_image_only_jpeg_and_webp_are_valid (test_api.ApiTests.test_image_only_jpeg_and_webp_are_valid) ... ok
+test_input_trimmed_for_analysis_but_original_preserved (test_api.ApiTests.test_input_trimmed_for_analysis_but_original_preserved) ... ok
+test_invalid_analyze_request (test_api.ApiTests.test_invalid_analyze_request) ... ok
+test_invalid_images_do_not_call_model_or_save (test_api.ApiTests.test_invalid_images_do_not_call_model_or_save) ... ok
+test_invalid_model_result_is_not_saved (test_api.ApiTests.test_invalid_model_result_is_not_saved) ... ok
+test_invalid_nested_results_rejected_without_overwriting (test_api.ApiTests.test_invalid_nested_results_rejected_without_overwriting) ... ok
+test_legacy_missing_origin_is_not_invented (test_api.ApiTests.test_legacy_missing_origin_is_not_invented) ... ok
+test_messages_invalid_inputs_fail_without_model_call (test_api.ApiTests.test_messages_invalid_inputs_fail_without_model_call) ... ok
+test_messages_preserve_original_and_forward_roles_and_time (test_api.ApiTests.test_messages_preserve_original_and_forward_roles_and_time) ... ok
+test_missing_record (test_api.ApiTests.test_missing_record) ... ok
+test_model_cannot_override_saved_record_id (test_api.ApiTests.test_model_cannot_override_saved_record_id) ... ok
+test_model_failures_return_json_without_saving (test_api.ApiTests.test_model_failures_return_json_without_saving) ... ok
+test_old_database_migrates_without_losing_records (test_api.ApiTests.test_old_database_migrates_without_losing_records) ... ok
+test_real_model_evidence_must_exist_in_original (test_api.ApiTests.test_real_model_evidence_must_exist_in_original) ... ok
+test_real_model_origin_cannot_be_changed_by_edit (test_api.ApiTests.test_real_model_origin_cannot_be_changed_by_edit) ... ok
+test_record_disappearing_during_edit_returns_404 (test_api.ApiTests.test_record_disappearing_during_edit_returns_404) ... ok
+test_sample_origin_cannot_be_changed_by_edit (test_api.ApiTests.test_sample_origin_cannot_be_changed_by_edit) ... ok
+
+----------------------------------------------------------------------
+Ran 63 tests in 4.415s
+
+OK
