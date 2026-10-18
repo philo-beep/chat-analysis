@@ -1,6 +1,7 @@
 <!-- 聊天输入，A 负责 -->
 <script setup>
 import { onMounted, onUnmounted, ref } from 'vue'
+import AppIcon from './AppIcon.vue'
 
 const props = defineProps({
   loading: { type: Boolean, default: false },
@@ -96,7 +97,9 @@ function clear() {
 </script>
 
 <template>
-  <section class="chat-input">
+  <section class="chat-input card">
+    <header class="input-heading"><div class="section-title"><span class="section-icon"><AppIcon name="message" /></span><div><h2>整理客户沟通</h2><p>添加聊天内容，开始一次需求分析</p></div></div><button type="button" class="demo-button ghost" :disabled="props.loading" @click="fillDemo"><AppIcon name="spark" :size="14" />填入演示样例</button></header>
+    <div class="input-body">
     <label class="customer-label" for="customer-name">客户名称（可选）</label>
     <input
       id="customer-name"
@@ -125,94 +128,51 @@ function clear() {
       <button v-if="image" type="button" class="file-name" :disabled="props.loading" @click="removeImage">
         {{ image.name }} ×
       </button>
-      <span class="hint">Ctrl/Cmd + Shift + D 填充演示样例</span>
+      <span class="hint">PNG / JPG / WebP · 最大 10 MiB</span>
     </div>
     <img v-if="imageUrl" class="preview" :src="imageUrl" alt="聊天截图预览" />
     <p v-if="inputError" class="input-error" role="alert">{{ inputError }}</p>
     <div class="actions">
-      <button type="button" :disabled="props.loading" @click="submit">
+      <button type="button" class="primary" :disabled="props.loading" @click="submit">
+        <span v-if="props.loading" class="spinner" aria-hidden="true"></span><AppIcon v-else name="spark" :size="16" />
         {{ props.loading ? '分析中…' : '开始分析' }}
       </button>
       <button type="button" class="ghost" :disabled="props.loading" @click="clear">清空</button>
+      <span class="input-meta">{{ text.length ? `${text.length} 字` : '也可直接粘贴聊天截图' }}</span>
     </div>
+    <p v-if="props.loading" class="loading-note" role="status">正在整理沟通内容，截图识别可能需要更长时间，请稍候。</p>
+    </div>
+    <footer class="input-footer"><AppIcon name="shield" :size="13" /><span>本地处理，保留原文依据</span><span class="shortcut">Ctrl/Cmd + Shift + D 填充演示样例</span></footer>
   </section>
 </template>
 
 <style scoped>
-.customer-label {
-  display: block;
-  margin: 10px 0 6px;
-  font-size: 14px;
-  font-weight: 600;
-}
-.customer-name {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 10px 12px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  font: inherit;
-}
-.role-hint {
-  margin: 0 0 8px;
-  color: #64748b;
-  font-size: 13px;
-}
-textarea {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 12px;
-  font: inherit;
-}
-.upload-row {
-  margin-top: 8px;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  font-size: 13px;
-}
-.upload-button {
-  padding: 6px 10px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  cursor: pointer;
-}
-.upload-button input {
-  display: none;
-}
-.file-name {
-  border: 0;
-  background: #f1f5f9;
-  color: #334155;
-}
-.hint {
-  color: #64748b;
-}
-.preview {
-  display: block;
-  max-width: min(100%, 420px);
-  max-height: 240px;
-  margin-top: 10px;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-}
-.input-error {
-  color: #dc2626;
-  margin: 8px 0 0;
-  font-size: 14px;
-}
-.actions {
-  margin-top: 8px;
-  display: flex;
-  gap: 8px;
-}
-button {
-  padding: 8px 16px;
-  cursor: pointer;
-}
-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
+.chat-input { overflow: hidden; }
+.input-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 21px 26px; border-bottom: 1px solid var(--line); }
+.input-heading h2 { margin: 0 0 4px; font-size: 16px; color: var(--ink); font-weight: 600; }
+.input-heading p { margin: 0; color: var(--muted); font-size: 11px; }
+.demo-button { border-color: transparent; color: #667b9e; font-size: 12px; padding: 6px 0 6px 10px; white-space: nowrap; }
+.input-body { padding: 22px 26px; }
+.customer-label { display: block; margin: 19px 0 8px; font-size: 12px; font-weight: 600; color: #43516a; }
+.customer-label:first-child { margin-top: 0; }
+.customer-name { max-width: 440px; }
+.role-hint { margin: 0 0 10px; color: #8a96a9; font-size: 11px; line-height: 1.8; }
+textarea { min-height: 160px; background: #fcfdff; line-height: 1.9; }
+.upload-row { margin-top: 12px; display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.upload-button { display: inline-flex; align-items: center; border: 1px dashed #b8c7df; border-radius: 7px; padding: 8px 13px; color: #577299; background: #f9fbff; font-size: 12px; position: relative; cursor: pointer; overflow: hidden; }
+.upload-button:hover { border-color: var(--brand); }
+.upload-button input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.file-name { max-width: 100%; overflow-wrap: anywhere; font-size: 11px; background: #edf2fc; border: 0; }
+.upload-row .hint { font-size: 10px; }
+.preview { display: block; max-width: min(100%, 420px); max-height: 240px; margin-top: 14px; border: 1px solid var(--line); border-radius: 8px; }
+.actions { border-top: 1px solid #f0f3f8; padding-top: 19px; margin-top: 21px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.actions .primary { min-width: 136px; min-height: 42px; }
+.actions .ghost { border-color: transparent; color: #8290a5; }
+.input-meta { color: #929db0; font-size: 11px; margin-left: auto; }
+.input-footer { display: flex; align-items: center; gap: 6px; padding: 12px 26px; background: #fafbfd; border-top: 1px solid var(--line); color: #8a98ad; font-size: 10px; }
+.shortcut { margin-left: auto; }
+.loading-note { color: #5c76a9; font-size: 12px; margin: 12px 0 0; line-height: 1.6; }
+.spinner { width: 14px; height: 14px; border: 2px solid #ffffff66; border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (max-width: 760px) { .input-heading { padding: 18px; flex-wrap: wrap; } .input-body { padding: 18px; } .input-heading p { font-size: 10px; } .demo-button { padding: 0; min-height: 24px; margin-left: 46px; } .input-meta { flex-basis: 100%; margin: 0; } .input-footer { padding: 12px 18px; flex-wrap: wrap; } .shortcut { display: none; } }
 </style>
