@@ -25,4 +25,10 @@ onBeforeUnmount(() => {
 })
 </script>
 <template><Teleport to="body"><div class="calendar-overlay" @click.self="!busy && $emit('close')"><section ref="box" class="calendar-dialog card" role="dialog" aria-modal="true" :aria-label="title" tabindex="-1" @keydown="keys"><header><h2>{{ title }}</h2><button aria-label="关闭弹窗" :disabled="busy" @click="$emit('close')">×</button></header><slot /></section></div></Teleport></template>
-<style scoped>.calendar-overlay { position: fixed; inset: 0; background: #13233c88; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px; }.calendar-dialog { width: min(560px, 100%); max-height: calc(100dvh - 32px); overflow-y: auto; padding: 24px; outline: none; }header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; }h2{ font-size:19px; margin:0; }header button { min-width:32px; padding:4px; }@media(max-width:500px){.calendar-dialog{padding:16px}}</style>
+<style scoped>.calendar-overlay { position: fixed; inset: 0; background: #27332080; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px; }.calendar-dialog { width: min(560px, 100%); max-height: calc(100dvh - 32px); overflow-y: auto; padding: 24px; outline: none; }header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; }h2{ font-size:19px; margin:0; }header button { min-width:32px; padding:4px; }@media(max-width:500px){.calendar-dialog{padding:16px}}
+.calendar-overlay { backdrop-filter: blur(3px); }
+.calendar-dialog { border-radius: 12px; border: 1px solid var(--line); background: var(--surface); box-shadow: 0 22px 70px #27332026; }
+header { padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+header h2 { color: var(--ink); font-weight: 650; }
+header button { border-radius: 50%; background: var(--canvas); }
+</style>
