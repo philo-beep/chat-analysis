@@ -1,7 +1,7 @@
 <!-- 结果与编辑，B 负责 -->
 <script setup>
-import { computed, ref, watch } from 'vue'
-import { exportRecord, getRecord, saveRecord } from '../api.js'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { exportRecordData, getRecord, saveRecord, trackCopy } from '../api.js'
 import AppIcon from './AppIcon.vue'
 
 const props = defineProps({
@@ -10,6 +10,8 @@ const props = defineProps({
   originalText: { type: String, default: '' },
   sourceImage: { type: String, default: '' },
   disabled: { type: Boolean, default: false },
+  sessionActive: { type: Boolean, default: true },
+  sessionKey: { type: [String, Number], default: 'default' },
 })
 const emit = defineEmits(['saved', 'busy'])
 const draft = ref(null)
@@ -17,6 +19,7 @@ const savedSnapshot = ref('')
 const busy = ref(false)
 const message = ref('')
 const error = ref('')
+const operationVersion = ref(0)
 const locked = computed(() => busy.value || props.disabled)
 const dirty = computed(() => draft.value && JSON.stringify(draft.value) !== savedSnapshot.value)
 
@@ -26,10 +29,22 @@ function setDraft(value) {
 }
 
 watch(() => [props.result, props.recordId], () => {
-  setDraft(props.result)
+  setDraft(props.sessionActive ? props.result : null)
   message.value = ''
   error.value = ''
 }, { immediate: true })
+
+function clearSessionState() {
+  operationVersion.value += 1
+  draft.value = null
+  savedSnapshot.value = ''
+  message.value = ''
+  error.value = ''
+  if (busy.value) setBusy(false)
+}
+
+watch(() => [props.sessionActive, props.sessionKey], clearSessionState, { flush: 'sync' })
+onBeforeUnmount(clearSessionState)
 
 function setBusy(value) {
   busy.value = value
@@ -37,45 +52,65 @@ function setBusy(value) {
 }
 
 function validate() {
+  if (!props.sessionActive) throw new Error('登录状态已失效，请重新登录后打开记录')
+  if (!draft.value) throw new Error('当前没有可操作的分析结果')
   if (!props.recordId) throw new Error('当前结果缺少记录编号，请重新打开历史记录')
   if (draft.value.requirements.some((item) => !item.field.trim() || !item.value.trim() || !item.evidence.trim())) {
     throw new Error('请补全每条需求的字段、值和原文依据，或删除空白需求')
   }
 }
 
-async function persist() {
+function isCurrent(version, recordId) {
+  return props.sessionActive && operationVersion.value === version && props.recordId === recordId
+}
+
+async function persist(version, recordId) {
   validate()
-  await saveRecord(props.recordId, draft.value)
+  await saveRecord(recordId, draft.value)
+  if (!isCurrent(version, recordId)) return false
   // 从服务端重读，确保成功提示对应已持久化的数据。
-  const record = await getRecord(props.recordId)
+  const record = await getRecord(recordId)
+  if (!isCurrent(version, recordId)) return false
   setDraft(record.result)
   emit('saved', record)
+  return true
 }
 
 async function save() {
   if (locked.value) return
   error.value = ''
   message.value = ''
+  const version = ++operationVersion.value
+  const id = props.recordId
   setBusy(true)
   try {
-    await persist()
-    message.value = '已保存，刷新或重新打开历史记录可查看'
+    if (await persist(version, id) && isCurrent(version, id)) {
+      message.value = '已保存，刷新或重新打开历史记录可查看'
+    }
   } catch (e) {
-    error.value = e instanceof Error ? e.message : '保存失败，请重试'
+    if (isCurrent(version, id)) error.value = e instanceof Error ? e.message : '保存失败，请重试'
   } finally {
-    setBusy(false)
+    if (isCurrent(version, id)) setBusy(false)
   }
 }
 
 async function copyReply() {
+  if (locked.value || !props.sessionActive || !draft.value) return
   error.value = ''
   message.value = ''
+  const version = operationVersion.value
+  const id = props.recordId
   try {
     if (!navigator.clipboard?.writeText) throw new Error('浏览器不支持剪贴板，请手动选择并复制回复草稿')
     await navigator.clipboard.writeText(draft.value.reply)
-    message.value = '回复草稿已复制'
+    if (props.sessionActive && operationVersion.value === version) {
+      message.value = '回复草稿已复制'
+      if (id && isCurrent(version, id)) trackCopy(id).catch(() => { /* 统计失败不影响复制。 */ })
+    }
   } catch (e) {
-    error.value = e instanceof Error ? `复制失败：${e.message}` : '复制失败，请手动复制回复草稿'
+    if (props.sessionActive && operationVersion.value === version) {
+      error.value = e instanceof Error ? `复制失败：${e.message}` : '复制失败，请手动复制回复草稿'
+    }
   }
 }
 
@@ -83,36 +118,38 @@ async function exportJson() {
   if (locked.value) return
   error.value = ''
   message.value = ''
+  const version = ++operationVersion.value
+  const id = props.recordId
   setBusy(true)
   try {
     validate()
-    // 导出后端完整记录；先保存修改，避免下载到旧结果。
-    if (dirty.value) await persist()
-    const response = await fetch(exportRecord(props.recordId))
-    if (!response.ok) {
-      const body = await response.json().catch(() => null)
-      throw new Error(typeof body?.detail === 'string' ? body.detail : `导出失败：${response.status}`)
+    // 导出前先保存，再经统一导出请求校验权限并记录真实导出调用。
+    if (dirty.value && !(await persist(version, id))) return
+    const record = await exportRecordData(id)
+    if (!isCurrent(version, id)) return
+    if (!record || !record.result) {
+      throw new Error('服务端返回的记录不完整，无法导出')
     }
-    const blob = await response.blob()
+    const blob = new Blob([JSON.stringify(record, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `record-${props.recordId}.json`
+    link.download = `record-${id}.json`
     document.body.appendChild(link)
     link.click()
     link.remove()
     setTimeout(() => URL.revokeObjectURL(url), 1000)
-    message.value = '已生成完整需求单，包含原文、结果和记录信息'
+    if (isCurrent(version, id)) message.value = '已生成完整需求单，包含原文、结果和记录信息'
   } catch (e) {
-    error.value = e instanceof Error ? e.message : '导出失败，请检查后端连接后重试'
+    if (isCurrent(version, id)) error.value = e instanceof Error ? e.message : '导出失败，请检查后端连接后重试'
   } finally {
-    setBusy(false)
+    if (isCurrent(version, id)) setBusy(false)
   }
 }
 </script>
 
 <template>
-  <section v-if="draft" class="result-panel card" aria-label="分析结果编辑面板">
+  <section v-if="draft && sessionActive" class="result-panel card" aria-label="分析结果编辑面板">
     <header class="result-heading"><div class="section-title"><span class="section-icon"><AppIcon name="file" /></span><div><div class="eyebrow">CUSTOMER BRIEF</div><h2>分析结果 <small v-if="recordId">#{{ recordId }}</small></h2></div></div><span class="result-status" :class="{ pending: dirty }"><span></span>{{ dirty ? '有待保存修改' : '已保存至本地' }}</span></header>
     <div class="result-content">
     <p v-if="draft.is_sample === true" class="sample-flag" role="status">
@@ -120,13 +157,15 @@ async function exportJson() {
     </p>
     <p v-else-if="draft.is_sample !== false" class="hint">旧记录未标注分析来源，请核对原文。</p>
     <div class="result-overview"><div><span>已梳理需求</span><strong>{{ draft.requirements.length }}<small>项</small></strong></div><div><span>待确认问题</span><strong>{{ draft.questions.length }}<small>项</small></strong></div><div><span>建议待办</span><strong>{{ draft.tasks.length }}<small>项</small></strong></div></div>
-    <details open class="original">
-      <summary>原始聊天记录（用于核对依据）</summary>
+    <details :key="`${sessionKey}:${recordId}`" class="original">
+      <summary>原始聊天记录（用于核对依据）<span class="original-toggle"><span class="when-closed">展开原文</span><span class="when-open">收起原文</span></span></summary>
+      <div class="original-content" tabindex="0" aria-label="原始聊天记录，可滚动查看完整内容">
       <figure v-if="sourceImage" class="source-image">
         <img :src="sourceImage" alt="此记录上传的原始聊天截图，可与下方识别文字核对" />
         <figcaption>原始聊天截图</figcaption>
       </figure>
       <pre>{{ originalText || '暂无可核对的文字原文；截图解析完成后可在此查看识别文本。' }}</pre>
+      </div>
     </details>
 
     <fieldset :disabled="locked">
@@ -207,6 +246,11 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 .sample-flag { padding: 12px; border: 2px solid #f59e0b; background: #fffbeb; color: #92400e; border-radius: 6px; font-weight: 600; }
 .original { background: #fafbfd; border: 1px solid var(--line); border-radius: 8px; padding: 13px 16px; font-size: 12px; color: #7d8aa0; }
 summary { cursor: pointer; color: #61738f; font-size: 12px; }
+.original-toggle { float: right; margin-left: 12px; color: #5374a7; }
+.original .when-open, .original[open] .when-closed { display: none; }
+.original[open] .when-open { display: inline; }
+.original-content { max-height: min(60vh, 480px); overflow: auto; margin-top: 12px; scrollbar-gutter: stable; }
+.original-content:focus-visible { outline: 2px solid #7190cb; outline-offset: 3px; }
 .source-image { margin: 12px 0; }
 .source-image img { display: block; max-width: 100%; max-height: 480px; width: auto; height: auto; object-fit: contain; }
 .source-image figcaption { margin-top: 6px; color: #64748b; font-size: 14px; }

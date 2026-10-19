@@ -1,0 +1,302 @@
+{
+  "environment": "temporary SQLite; real local text model; secrets redacted",
+  "http": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/auth/register",
+        "body": {
+          "username": "evidence_member",
+          "password": "<redacted>"
+        },
+        "authorization": null
+      },
+      "status": 200,
+      "response": {
+        "code": 0,
+        "message": "注册成功，请登录",
+        "data": {
+          "user": {
+            "id": 2,
+            "username": "evidence_member",
+            "is_active": true,
+            "created_at": 1792403744,
+            "updated_at": 1792403744,
+            "roles": [
+              "member"
+            ],
+            "permissions": [
+              "analysis:run",
+              "records:export",
+              "records:read",
+              "records:write"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/auth/login",
+        "body": {
+          "username": "evidence_member",
+          "password": "<redacted>"
+        },
+        "authorization": null
+      },
+      "status": 200,
+      "response": {
+        "code": 0,
+        "message": "登录成功",
+        "data": {
+          "token": "<redacted>",
+          "token_type": "bearer",
+          "expires_in": 3600,
+          "user": {
+            "id": 2,
+            "username": "evidence_member",
+            "is_active": true,
+            "created_at": 1792403744,
+            "updated_at": 1792403744,
+            "roles": [
+              "member"
+            ],
+            "permissions": [
+              "analysis:run",
+              "records:export",
+              "records:read",
+              "records:write"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/auth/me",
+        "body": {},
+        "authorization": "Bearer <redacted>"
+      },
+      "status": 200,
+      "response": {
+        "code": 0,
+        "message": "成功",
+        "data": {
+          "id": 2,
+          "username": "evidence_member",
+          "is_active": true,
+          "created_at": 1792403744,
+          "updated_at": 1792403744,
+          "roles": [
+            "member"
+          ],
+          "permissions": [
+            "analysis:run",
+            "records:export",
+            "records:read",
+            "records:write"
+          ]
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/analyze",
+        "body": {
+          "text": "客户：需要100件文化衫，预算3000元。\n商家：收到，请确认尺码。"
+        },
+        "authorization": "Bearer <redacted>"
+      },
+      "status": 200,
+      "response": {
+        "code": 0,
+        "message": "分析成功",
+        "data": {
+          "id": 1,
+          "requirements": [
+            {
+              "field": "品类",
+              "value": "文化衫",
+              "evidence": "需要100件文化衫"
+            },
+            {
+              "field": "数量",
+              "value": "100件",
+              "evidence": "需要100件文化衫"
+            },
+            {
+              "field": "预算",
+              "value": "3000元",
+              "evidence": "预算3000元"
+            }
+          ],
+          "questions": [
+            "请确认期望收货时间",
+            "请确认尺码分布",
+            "请确认印制图案及是否需要商家提供设计"
+          ],
+          "tasks": [
+            "根据已记录需求核算报价，确认后再回复价格",
+            "核实生产与物流可行时间"
+          ],
+          "reply": "收到，已记录品类：文化衫、数量：100件、预算：3000元。还需确认：请确认期望收货时间；请确认尺码分布；请确认印制图案及是否需要商家提供设计。具体报价和可行交期核实后再与您确认。",
+          "is_sample": false
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/records",
+        "body": {},
+        "authorization": "Bearer <redacted>"
+      },
+      "status": 200,
+      "response": {
+        "code": 0,
+        "message": "ok",
+        "data": [
+          {
+            "id": 1,
+            "title": "客户：需要100件文化衫，预算3000元。",
+            "created_at": "2026-10-19T17:55:44",
+            "updated_at": "2026-10-19T17:55:44"
+          }
+        ]
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/admin/overview",
+        "body": {},
+        "authorization": "Bearer <redacted>"
+      },
+      "status": 403,
+      "response": {
+        "code": 403,
+        "message": "没有执行此操作的权限",
+        "data": null
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/auth/me",
+        "body": {},
+        "authorization": null
+      },
+      "status": 401,
+      "response": {
+        "code": 401,
+        "message": "请先登录或重新登录",
+        "data": null
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/auth/me",
+        "body": {},
+        "authorization": "Bearer <redacted>"
+      },
+      "status": 401,
+      "response": {
+        "code": 401,
+        "message": "请先登录或重新登录",
+        "data": null
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "path": "/api/auth/logout",
+        "body": {},
+        "authorization": "Bearer <redacted>"
+      },
+      "status": 200,
+      "response": {
+        "code": 0,
+        "message": "已退出登录",
+        "data": null
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "path": "/api/auth/me",
+        "body": {},
+        "authorization": "Bearer <redacted>"
+      },
+      "status": 401,
+      "response": {
+        "code": 401,
+        "message": "请先登录或重新登录",
+        "data": null
+      }
+    }
+  ],
+  "database": {
+    "users": [
+      {
+        "id": 1,
+        "username": "evidence_admin",
+        "is_active": 1,
+        "hash_algorithm": "$argon2id"
+      },
+      {
+        "id": 2,
+        "username": "evidence_member",
+        "is_active": 1,
+        "hash_algorithm": "$argon2id"
+      }
+    ],
+    "roles": [
+      {
+        "id": 1,
+        "code": "admin"
+      },
+      {
+        "id": 2,
+        "code": "member"
+      },
+      {
+        "id": 3,
+        "code": "viewer"
+      }
+    ],
+    "user_roles": [
+      {
+        "user_id": 1,
+        "role_id": 1
+      },
+      {
+        "user_id": 2,
+        "role_id": 2
+      }
+    ],
+    "records": [
+      {
+        "id": 1,
+        "owner_id": 2
+      }
+    ],
+    "sessions": [
+      {
+        "id": 1,
+        "user_id": 2,
+        "hash_length": 64,
+        "revoked": 1
+      },
+      {
+        "id": 2,
+        "user_id": 2,
+        "hash_length": 64,
+        "revoked": 0
+      }
+    ]
+  }
+}

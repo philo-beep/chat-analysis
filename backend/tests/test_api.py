@@ -21,6 +21,7 @@ from fastapi.testclient import TestClient
 from PIL import Image
 
 import database
+import auth_store
 import main
 from ai_contract import AnalysisOutcome
 
@@ -32,6 +33,11 @@ class ApiTests(unittest.TestCase):
         db_patch = patch.object(database, "DB_PATH", Path(self.temp_dir.name) / "test.db")
         db_patch.start()
         self.addCleanup(db_patch.stop)
+        secret_patch = patch.dict(os.environ, {
+            "KEYOUSHU_JWT_SECRET": "api-test-only-75cfe97279054a378196ff529ae231b2",
+        })
+        secret_patch.start()
+        self.addCleanup(secret_patch.stop)
         logger_patch = patch.object(main, "logger")
         self.logger = logger_patch.start()
         self.addCleanup(logger_patch.stop)
@@ -43,6 +49,13 @@ class ApiTests(unittest.TestCase):
         model_patch.start()
         self.addCleanup(model_patch.stop)
         self.client = self.enterContext(TestClient(main.app, raise_server_exceptions=False))
+        # 使用临时库中的真实账号和登录接口，不覆盖鉴权依赖。
+        auth_store.create_user("testadmin", "Test-admin-987654!", role_codes=["admin"])
+        logged_in = self.client.post("/api/auth/login", json={
+            "username": "testadmin", "password": "Test-admin-987654!",
+        })
+        self.assertEqual(logged_in.status_code, 200, logged_in.text)
+        self.client.headers["Authorization"] = f"Bearer {logged_in.json()['data']['token']}"
 
     def analyze(self, text="客户甲：我们想定制 100 件文化衫"):
         response = self.client.post("/analyze", json={"text": text})
@@ -58,6 +71,25 @@ class ApiTests(unittest.TestCase):
         response = self.client.get("/health")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"status": "ok"})
+
+    def test_unauthenticated_text_and_image_never_reach_model(self):
+        token = self.client.headers.pop("Authorization")
+        try:
+            with patch.object(main, "analyze_chat") as text_model, patch.object(main, "analyze_chat_with_source") as image_model:
+                for authorization in (None, "Bearer not-a-valid-token"):
+                    with self.subTest(authorization=authorization):
+                        headers = {} if authorization is None else {"Authorization": authorization}
+                        response = self.client.post("/analyze", json={"text": "客户：需要100件文化衫。"}, headers=headers)
+                        self.assertEqual(response.status_code, 401, response.text)
+                        response = self.client.post("/analyze", files={
+                            "image": ("chat.png", self.image_bytes(), "image/png"),
+                        }, headers=headers)
+                        self.assertEqual(response.status_code, 401, response.text)
+                text_model.assert_not_called()
+                image_model.assert_not_called()
+        finally:
+            self.client.headers["Authorization"] = token
+        self.assertEqual(database.list_records(), [])
 
     def test_full_save_read_edit_export_chain(self):
         text = "  客户甲：我们想定制 100 件文化衫\n数量、预算等待确认。  "
