@@ -9,6 +9,7 @@ export function routeFromHash(hash, canViewAdmin = false) {
   const scoped = /^records\/([1-9]\d*)\/(tasks|questions|screenshots)$/.exec(name)
   if (scoped && Number.isSafeInteger(Number(scoped[1]))) return { section: scoped[2], recordId: Number(scoped[1]) }
   if (directorySections.some((item) => item.key === name)) return { section: name, recordId: null }
+  if (name === 'calendar' || name === 'calendar/gantt') return { section: name, recordId: null }
   return { section: name === 'admin' && canViewAdmin ? 'admin' : 'workspace', recordId: null }
 }
 

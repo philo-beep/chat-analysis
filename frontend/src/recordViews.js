@@ -13,7 +13,7 @@ export function buildRecordViews(records) {
       if (!Array.isArray(values)) continue
       values.forEach((value, index) => {
         if (typeof value !== 'string' || !value.trim()) return
-        views[kind].push({ ...source, key: `${record.id}:${kind}:${index}`, text: value })
+        views[kind].push({ ...source, key: `${record.id}:${kind}:${index}`, text: value, taskIndex: index })
       })
     }
     if (typeof record.source_image === 'string' && record.source_image.trim()) {

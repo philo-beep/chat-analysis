@@ -164,3 +164,32 @@ export function exportRecord(id) {
 export function exportRecordData(id) {
   return request(`/records/${id}/export`)
 }
+
+// 日程沿用统一鉴权、错误处理与业务返回体。
+export function listCalendarItems(params = {}) {
+  const query = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null) query.set(key, String(value))
+  }
+  return authRequest(`/api/calendar/items?${query}`)
+}
+
+export function createCalendarItem(body) {
+  return authRequest('/api/calendar/items', { method: 'POST', body: JSON.stringify(body) })
+}
+
+export function updateCalendarItem(id, body) {
+  return authRequest(`/api/calendar/items/${id}`, { method: 'PATCH', body: JSON.stringify(body) })
+}
+
+export function deleteCalendarItem(id) {
+  return authRequest(`/api/calendar/items/${id}`, { method: 'DELETE' })
+}
+
+export function completeCalendarItem(id, completed) {
+  return authRequest(`/api/calendar/items/${id}/completion`, { method: 'PATCH', body: JSON.stringify({ completed }) })
+}
+
+export function importCalendarTask(body) {
+  return authRequest('/api/calendar/items/from-record', { method: 'POST', body: JSON.stringify(body) })
+}

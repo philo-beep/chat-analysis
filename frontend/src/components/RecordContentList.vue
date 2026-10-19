@@ -12,8 +12,9 @@ defineProps({
   disabled: { type: Boolean, default: false },
   scopedRecordId: { type: Number, default: null },
   scopeLabel: { type: String, default: '' },
+  allowImport: { type: Boolean, default: false },
 })
-defineEmits(['select', 'refresh'])
+defineEmits(['select', 'refresh', 'import'])
 </script>
 
 <template>
@@ -36,6 +37,7 @@ defineEmits(['select', 'refresh'])
             <img v-if="item.image" :src="item.image" alt="原始聊天截图缩略图" loading="lazy" />
             <span class="item-body"><span class="text">{{ item.text }}</span><span v-if="item.isSample" class="sample">开发样例</span><span class="source">来源：{{ item.title }} · #{{ item.recordId }}</span><span class="time"><AppIcon name="clock" :size="11" />{{ item.createdAt }} · 打开来源记录</span></span>
           </button>
+          <button v-if="allowImport" class="import-task ghost" :disabled="disabled || loading" @click="$emit('import', item)">加入待办池</button>
         </li>
       </ul>
     </template>
@@ -50,6 +52,7 @@ h1 span { font-size: 12px; margin-left: 8px; background: #edf2ff; color: #657eaf
 .hint { margin-bottom: 6px; }
 .scope { font-size: 11px; }
 .items { list-style: none; padding: 0; margin: 0; }
+.import-task { margin: 0 0 14px 12px; font-size: 12px; }
 .item { width: 100%; justify-content: flex-start; align-items: flex-start; text-align: left; gap: 16px; padding: 15px 12px; margin-bottom: 6px; background: none; border: 1px solid #e5eaf2; }
 .item:hover:not(:disabled) { background: #f3f6fc; border-color: #b9c8e6; }
 .item-body { display: flex; flex-direction: column; gap: 8px; min-width: 0; }

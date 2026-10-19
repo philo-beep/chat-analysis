@@ -64,7 +64,7 @@ test('账号或批次失效后，迟到详情不得写入缓存、列表或进�
 test('空记录不发起详情请求；hash 刷新可恢复目录且后台仍受权限限制', async () => {
   const loaded = await loadRecordDetails([], () => { throw new Error('不应调用') })
   assert.deepEqual(loaded, { records: [], failures: [] })
-  for (const section of ['workspace', 'tasks', 'questions', 'screenshots']) {
+  for (const section of ['workspace', 'tasks', 'questions', 'screenshots', 'calendar', 'calendar/gantt']) {
     assert.equal(sectionFromHash(hashForSection(section)), section)
   }
   assert.equal(sectionFromHash('#/admin'), 'workspace')

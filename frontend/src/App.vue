@@ -11,9 +11,10 @@ import SidebarDirectories from './components/SidebarDirectories.vue'
 import TaskList from './components/TaskList.vue'
 import QuestionList from './components/QuestionList.vue'
 import ScreenshotList from './components/ScreenshotList.vue'
+import CalendarPanel from './components/CalendarPanel.vue'
 import { directorySections, hashForSection, routeFromHash, sectionFromHash } from './navigation.js'
 import { buildRecordViews, loadRecordDetails } from './recordViews.js'
-import { analyze, getRecord, listRecords, getCurrentUser, logout, trackPageView } from './api.js'
+import { analyze, getRecord, listRecords, getCurrentUser, logout, trackPageView, importCalendarTask } from './api.js'
 import { currentUser, sessionVersion, getAuthToken, establishSession, restoreSessionUser, clearSession } from './auth.js'
 
 const records = ref([])
@@ -39,7 +40,11 @@ const scopedLoading = ref(false)
 const scopedError = ref('')
 let scopedEpoch = 0
 const canViewAdmin = computed(() => currentUser.value?.permissions?.includes('admin:stats'))
-const sectionTitle = computed(() => directorySections.find((item) => item.key === section.value)?.label || (section.value === 'admin' ? '网站后台统计' : '需求工作台'))
+const canWrite = computed(() => currentUser.value?.permissions?.includes('records:write') === true)
+const isCalendar = computed(() => section.value === 'calendar' || section.value === 'calendar/gantt')
+const sectionTitle = computed(() => directorySections.find((item) => item.key === section.value)?.label || (isCalendar.value ? '日程计划' : section.value === 'admin' ? '网站后台统计' : '需求工作台'))
+const calendarImportMessage = ref('')
+const calendarImportError = ref('')
 const directoryComponent = computed(() => ({ tasks: TaskList, questions: QuestionList, screenshots: ScreenshotList })[section.value])
 const directoryRecords = ref([])
 const directoryLoading = ref(false)
@@ -83,8 +88,28 @@ function navigate(next, targetId = null) {
 }
 
 function navigateDirectory(next) {
+  if (next === 'calendar' || next === 'workspace') return navigate(next)
   if (scopeMode.value === 'current' && !shortcutRecordId.value) return
   navigate(next, scopeMode.value === 'current' ? shortcutRecordId.value : null)
+}
+
+async function addSuggestionToCalendar(item) {
+  if (!canWrite.value || loading.value || panelBusy.value) return
+  const version = sessionVersion.value
+  panelBusy.value = true
+  calendarImportMessage.value = ''
+  calendarImportError.value = ''
+  try {
+    const task = await importCalendarTask({ record_id: item.recordId, task_index: item.taskIndex, expected_text: item.text })
+    if (isCurrent(version)) calendarImportMessage.value = task.completed
+      ? `「${task.title}」已存在于日程计划的已完成列表，可在那里重新打开。`
+      : task.due_date ? `「${task.title}」已排期，可在日程计划查看；重复点击不会重复创建。`
+        : `「${task.title}」已加入日程计划，可在待办池排期；重复点击不会重复创建。`
+  } catch (e) {
+    if (isCurrent(version)) calendarImportError.value = `加入待办池失败：${e.message}`
+  } finally {
+    if (isCurrent(version)) panelBusy.value = false
+  }
 }
 
 function changeScope(mode) {
@@ -300,6 +325,8 @@ async function openRecord(record) {
 }
 
 function resetWorkspace() {
+  calendarImportMessage.value = ''
+  calendarImportError.value = ''
   scopedEpoch += 1
   scopedRecord.value = null
   scopedLoading.value = false
@@ -425,8 +452,11 @@ restoreLogin()
     <main class="main">
       <header class="topbar"><span>工作空间 <span class="breadcrumb-divider">/</span> <strong>{{ sectionTitle }}</strong></span><div class="session-tools"><span>{{ currentUser.username }}</span><button v-if="canViewAdmin" type="button" :disabled="loading || panelBusy" @click="navigate(section === 'admin' ? 'workspace' : 'admin')">{{ section === 'admin' ? '返回工作台' : '后台统计' }}</button><button type="button" :disabled="loggingOut" @click="handleLogout">{{ loggingOut ? '退出中…' : '退出登录' }}</button></div></header>
       <div v-if="section === 'admin' && canViewAdmin" class="workspace"><AdminPanel /></div>
+      <div v-if="isCalendar" class="workspace"><CalendarPanel :key="sessionVersion" :view="section === 'calendar/gantt' ? 'gantt' : 'calendar'" :disabled="!canWrite" @navigate="navigate" @busy="handlePanelBusy" /></div>
       <div v-if="directoryComponent" class="workspace">
-        <component :is="directoryComponent" :items="activeViews[section]" :loading="!workspaceReady || (directoryRecordId ? scopedLoading : directoryLoading || recordsLoading)" :error="directoryRecordId ? scopedError : directoryError" :failures="directoryRecordId ? [] : directoryFailures" :progress="directoryRecordId ? (scopedRecord ? 1 : 0) : directoryProgress" :total="directoryRecordId ? 1 : records.length" :scoped-record-id="directoryRecordId" :scope-label="directoryRecordId ? `范围：当前聊天 · ${shortcutRecordTitle} · #${directoryRecordId}` : ''" :disabled="loading || panelBusy" @select="openDirectoryRecord" @refresh="refreshDirectory" />
+        <p v-if="section === 'tasks' && calendarImportMessage" role="status">{{ calendarImportMessage }}</p>
+        <p v-if="section === 'tasks' && calendarImportError" class="error" role="alert">{{ calendarImportError }}</p>
+        <component :is="directoryComponent" :items="activeViews[section]" :allow-import="section === 'tasks' && canWrite" @import="addSuggestionToCalendar" :loading="!workspaceReady || (directoryRecordId ? scopedLoading : directoryLoading || recordsLoading)" :error="directoryRecordId ? scopedError : directoryError" :failures="directoryRecordId ? [] : directoryFailures" :progress="directoryRecordId ? (scopedRecord ? 1 : 0) : directoryProgress" :total="directoryRecordId ? 1 : records.length" :scoped-record-id="directoryRecordId" :scope-label="directoryRecordId ? `范围：当前聊天 · ${shortcutRecordTitle} · #${directoryRecordId}` : ''" :disabled="loading || panelBusy" @select="openDirectoryRecord" @refresh="refreshDirectory" />
       </div>
       <div v-show="section === 'workspace'" class="workspace">
       <header class="page-header"><div><div class="eyebrow">CUSTOMER WORKSPACE</div><h1>让每一次沟通，都有清晰的下一步。</h1><p>从客户聊天中梳理需求、识别待确认事项，轻松推进订单跟进。</p></div><span class="workspace-label"><AppIcon name="shield" :size="16" />本机处理</span></header>

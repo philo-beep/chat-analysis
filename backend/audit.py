@@ -31,6 +31,11 @@ def classify(path, method):
     if path in ('/records', '/api/records'): return 'history'
     if path.startswith('/api/access-control/'): return 'access_control'
     if path.startswith('/api/admin/'): return 'admin_stats'
+    if path.startswith('/api/calendar/'):
+        if path.endswith('/completion'): return 'calendar_complete'
+        if path.endswith('/from-record'): return 'calendar_import'
+        return {'POST': 'calendar_create', 'PATCH': 'calendar_edit',
+                'DELETE': 'calendar_delete'}.get(method, 'calendar_read')
     return None
 
 

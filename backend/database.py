@@ -60,6 +60,8 @@ def init_db() -> None:
             if name not in columns:
                 conn.execute(f"ALTER TABLE records ADD COLUMN {name} {declaration}")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_records_owner ON records(owner_id, id DESC)")
+        from calendar_store import init_schema as init_calendar_schema
+        init_calendar_schema(conn)
 
 
 def save_record(

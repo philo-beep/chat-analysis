@@ -28,6 +28,7 @@ import audit
 from auth import permission
 from auth_routes import router as auth_router
 from access_routes import router as access_router
+from calendar_routes import router as calendar_router
 from ai_service import analyze_chat
 from ai_contract import AnalysisOutcome
 
@@ -46,6 +47,7 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(title="聊天分析 API", version="0.1.0", lifespan=lifespan)
 app.include_router(auth_router)
 app.include_router(access_router)
+app.include_router(calendar_router)
 app.include_router(audit.routes())
 app.middleware('http')(audit.record_request)
 
