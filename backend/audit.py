@@ -27,8 +27,10 @@ def classify(path, method):
     if path == '/api/usage/copy': return 'copy_client'
     if path in ('/analyze', '/api/analyze'): return 'analysis'
     if re.fullmatch(r'/(api/)?records/\d+/export', path): return 'export'
-    if re.fullmatch(r'/(api/)?records/\d+', path): return 'save' if method == 'PUT' else 'record_read'
-    if path in ('/records', '/api/records'): return 'history'
+    if re.fullmatch(r'/(api/)?records/\d+', path):
+        return {'PUT': 'save', 'DELETE': 'record_delete'}.get(method, 'record_read')
+    if path in ('/records', '/api/records'):
+        return 'history_delete' if method == 'DELETE' else 'history'
     if path.startswith('/api/access-control/'): return 'access_control'
     if path.startswith('/api/admin/'): return 'admin_stats'
     if path.startswith('/api/calendar/'):

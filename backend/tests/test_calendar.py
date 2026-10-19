@@ -174,8 +174,102 @@ class CalendarTests(unittest.TestCase):
         self.assertNotEqual(item["id"], admin_item["id"])
         database.update_result(record_id, {"tasks": ["更新后的任务"]})
         self.request("post", "/from-record", payload=payload, status=409)
-        self.assertEqual(self.request("get")["total"], 1)
+        self.assertEqual(self.request("get")["total"], 3)
         self.request("post", "/from-record", payload={**payload, "task_index": 99}, status=409)
+
+    def test_analysis_tasks_sync_to_pool_or_explicit_deadline(self):
+        record_id = database.save_record("分析聊天", {
+            "tasks": ["联系客户确认", "DDL: 2026-10-25 提交终稿", "截止日期：2026-10-30 发送合同", "周五讨论方案"],
+        }, owner_id=self.owner["id"])
+        tasks = self.request("get", "?status=all")["items"]
+        linked = [item for item in tasks if item["source_record_id"] == record_id]
+        self.assertEqual(len(linked), 4)
+        by_title = {item["title"]: item for item in linked}
+        self.assertIsNone(by_title["联系客户确认"]["due_date"])
+        self.assertIsNone(by_title["周五讨论方案"]["due_date"])
+        self.assertEqual(by_title["DDL: 2026-10-25 提交终稿"]["due_date"], "2026-10-25")
+        self.assertEqual(by_title["截止日期：2026-10-30 发送合同"]["due_date"], "2026-10-30")
+        self.assertTrue(all(item["manual_level"] is None for item in linked))
+        self.assertEqual(self.request("get", "?scheduled=false")["total"], 2)
+
+    def test_old_records_are_backfilled_once_without_overwriting_existing_tasks(self):
+        record_id = database.save_record("旧分析", {"tasks": ["待办建议", "DDL: 2026-10-25 已排期建议"]},
+                                         owner_id=self.owner["id"])
+        with database._connect() as conn:
+            conn.execute("DELETE FROM task_items WHERE source_record_id=?", (record_id,))
+            conn.execute("DELETE FROM calendar_migrations WHERE code='record-task-backfill-v1'")
+        database.init_db()
+        database.init_db()
+        linked = [item for item in self.request("get", "?status=all")["items"]
+                  if item["source_record_id"] == record_id]
+        self.assertEqual(len(linked), 2)
+        self.assertEqual({item["due_date"] for item in linked}, {None, "2026-10-25"})
+
+    def test_analysis_and_calendar_sync_rollback_together(self):
+        import calendar_store
+        with patch.object(calendar_store, "_insert", side_effect=RuntimeError("同步模拟失败")):
+            with self.assertRaisesRegex(RuntimeError, "同步模拟失败"):
+                database.save_record("事务回滚", {"tasks": ["同步失败任务"]}, owner_id=self.owner["id"])
+        self.assertEqual(self.client.get("/api/records", headers=self.headers).json()["data"], [])
+        self.assertEqual(self.request("get", "?status=all")["total"], 0)
+
+    def test_saved_analysis_edits_sync_new_suggestions_without_duplicating_existing(self):
+        record_id = database.save_record("编辑建议", {"tasks": ["原任务"]}, owner_id=self.owner["id"])
+        original = next(item for item in self.request("get", "?status=all")["items"]
+                        if item["source_record_id"] == record_id)
+        original = self.request("patch", f"/{original['id']}", payload={
+            "due_date": "2026-10-25", "manual_level": 5,
+        })
+        original = self.request("patch", f"/{original['id']}/completion", payload={"completed": True})
+        self.assertTrue(database.update_result(record_id, {"tasks": ["原任务", "新增任务"]},
+                                               owner_id=self.owner["id"], include_all=False))
+        self.assertTrue(database.update_result(record_id, {"tasks": []},
+                                               owner_id=self.owner["id"], include_all=False))
+        linked = [item for item in self.request("get", "?status=all")["items"]
+                  if item["source_record_id"] == record_id]
+        self.assertEqual({item["title"] for item in linked}, {"原任务", "新增任务"})
+        preserved = next(item for item in linked if item["id"] == original["id"])
+        self.assertEqual((preserved["due_date"], preserved["manual_level"], preserved["completed"]),
+                         ("2026-10-25", 5, True))
+
+    def test_delete_record_removes_linked_tasks_but_not_manual_tasks(self):
+        record_id = database.save_record("待删除聊天", {"tasks": ["未排期任务", "DDL: 2026-10-25 已排期任务"]},
+                                         owner_id=self.owner["id"])
+        manual = store.create_item(self.owner["id"], {"title": "手工日历事项"})
+        response = self.client.delete(f"/api/records/{record_id}", headers=self.headers)
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()["data"], {
+            "id": record_id, "deleted": True, "deleted_calendar_tasks": 2,
+        })
+        self.assertEqual(self.client.get(f"/api/records/{record_id}", headers=self.headers).status_code, 404)
+        remaining = self.request("get", "?status=all")["items"]
+        self.assertEqual([item["id"] for item in remaining], [manual["id"]])
+
+    def test_delete_record_is_owner_scoped_and_requires_write_permission(self):
+        record_id = database.save_record("他人聊天", {"tasks": ["保留建议"]}, owner_id=self.owner["id"])
+        owner_records = self.client.get("/api/records", headers=self.headers).json()["data"]
+        self.assertTrue(next(item for item in owner_records if item["id"] == record_id)["can_delete"])
+        admin_records = self.client.get("/api/records", headers=self.other_headers).json()["data"]
+        self.assertFalse(next(item for item in admin_records if item["id"] == record_id)["can_delete"])
+        self.assertEqual(self.client.delete(f"/api/records/{record_id}", headers=self.other_headers).status_code, 404)
+        self.assertEqual(self.client.delete(f"/api/records/{record_id}", headers=self.viewer_headers).status_code, 403)
+        self.assertIsNotNone(database.get_record(record_id, owner_id=self.owner["id"], include_all=False))
+        self.assertEqual(self.request("get", "?scheduled=false")["total"], 1)
+
+    def test_deleting_source_chat_only_removes_the_deleters_calendar_copy(self):
+        record_id = database.save_record("跨账号来源聊天", {"tasks": ["保留另一账号的排期"]},
+                                         owner_id=self.owner["id"])
+        imported = self.request("post", "/from-record", payload={
+            "record_id": record_id, "task_index": 0, "expected_text": "保留另一账号的排期",
+        }, headers=self.other_headers)
+        response = self.client.delete(f"/api/records/{record_id}", headers=self.headers)
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()["data"]["deleted_calendar_tasks"], 1)
+        self.assertEqual(self.request("get", "?status=all")["total"], 0)
+        remaining = self.request("get", "?status=all", headers=self.other_headers)["items"]
+        self.assertEqual(len(remaining), 1)
+        self.assertEqual(remaining[0]["id"], imported["id"])
+        self.assertIsNone(remaining[0]["source_record_id"])
 
     def test_source_corruption_does_not_insert_partial_task(self):
         record_id = database.save_record("损坏来源", {"tasks": []}, owner_id=self.owner["id"])

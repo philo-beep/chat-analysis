@@ -1,6 +1,7 @@
 // 用临时 SQLite 和真实 HTTP 接口验证；不会改用户 app.db，也不调用图片模型。
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -8,6 +9,8 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = fileURLToPath(new URL('../..', import.meta.url))
+const defaultPython = resolve(root, process.platform === 'win32' ? 'backend/.venv/Scripts/python.exe' : 'backend/.venv/bin/python')
+const edgePath = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
 const require = createRequire(import.meta.url)
 const { chromium } = require(process.env.PLAYWRIGHT_NODE_MODULES
   ? resolve(process.env.PLAYWRIGHT_NODE_MODULES, 'playwright') : 'playwright')
@@ -56,7 +59,8 @@ user = auth_store.create_user('directory_tester', 'Directory-test-2026', ['membe
 auth_store.create_user('directory_empty', 'Directory-test-2026', ['member'])
 auth_store.create_user('calendar_viewer', 'Directory-test-2026', ['viewer'])
 other = auth_store.create_user('directory_other', 'Directory-test-2026', ['member'])
-result = dict(requirements=[dict(field='品类', value='礼盒', evidence='礼盒')], questions=['交货日期是否确定？'], tasks=['联系甲方确认颜色', '周五提交报价'], reply='已收到礼盒需求。', is_sample=False)
+due = (calendar_store.today()+timedelta(days=6)).isoformat()
+result = dict(requirements=[dict(field='品类', value='礼盒', evidence='礼盒')], questions=['交货日期是否确定？'], tasks=['联系甲方确认颜色', f'DDL: {due} 提交报价'], reply='已收到礼盒需求。', is_sample=False)
 text = '长对话测试礼盒\\n' + ('甲：请确认礼盒报价与交期。\\n乙：周五提供方案，请先确认颜色。\\n' * 100) + '原文末尾标记'
 database.save_record(text, result, source_input={'text': text}, owner_id=user['id'])
 stream = io.BytesIO()
@@ -82,7 +86,7 @@ try {
     try { await fetch(url); occupied = true } catch {}
     assert.equal(occupied, false, '测试端口已占用：' + url)
   }
-  const backend = start(process.env.PYTHON_EXECUTABLE || resolve(root, 'backend/.venv/Scripts/python.exe'),
+  const backend = start(process.env.PYTHON_EXECUTABLE || defaultPython,
     ['-B', '-c', seed, resolve(temp, 'test.db')], resolve(root, 'backend'), {
       KEYOUSHU_JWT_SECRET: 'isolated-directory-browser-test-secret-2026', PYTHONIOENCODING: 'utf-8',
     })
@@ -90,7 +94,7 @@ try {
   const frontend = start(process.execPath, [resolve(root, 'frontend/node_modules/vite/bin/vite.js'), '--host', '127.0.0.1', '--port', '15173', '--strictPort'],
     resolve(root, 'frontend'), { VITE_API_BASE: api })
   await ready(ui, frontend)
-  browser = await chromium.launch({ executablePath: process.env.EDGE_EXECUTABLE || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true })
+  browser = await chromium.launch({ executablePath: process.env.EDGE_EXECUTABLE || (existsSync(edgePath) ? edgePath : undefined), headless: true })
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, acceptDownloads: true })
   const page = await context.newPage()
   page.on('pageerror', (error) => errors.push(error.message))
@@ -117,6 +121,20 @@ try {
     assert.equal(response.status, 200, JSON.stringify(body))
     return body.data
   }
+  async function recordsRequest(path, options = {}) {
+    return fetch(api + '/api/records' + path, { ...options, headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } })
+  }
+  const historyResponse = await recordsRequest('')
+  assert.equal(historyResponse.status, 200)
+  const history = (await historyResponse.json()).data
+  const longChat = history.find(record => record.title.startsWith('长对话测试礼盒'))
+  assert.ok(longChat)
+  const analysisLinked = (await apiRequest('?status=all')).items.filter(item => item.source_record_id === longChat.id)
+  assert.equal(analysisLinked.length, 2)
+  assert.equal(analysisLinked.find(item => item.title === '联系甲方确认颜色').due_date, null)
+  assert.match(analysisLinked.find(item => item.title.startsWith('DDL:')).due_date, /^\d{4}-\d{2}-\d{2}$/)
+  assert.equal((await apiRequest('?scheduled=false')).items.some(item => item.source_record_id === longChat.id && item.title === '联系甲方确认颜色'), true)
+  pass('聊天分析待办自动同步：无明确 DDL 进入待办池，明确日期直接排期并使用自动等级')
   const initial = await apiRequest('?status=all')
   const today = initial.today
   const dateAdd = (n) => new Date(Date.parse(today + 'T00:00:00Z') + n * 86400000).toISOString().slice(0, 10)
@@ -125,8 +143,8 @@ try {
   assert.equal(await nav('日程计划').getAttribute('aria-current'), 'page')
   const day = (date) => panel.locator(`.day[data-date="${date}"]`)
   assert.equal(await day(today).locator('.dot').count(), 5)
-  await day(today).getByRole('button', { name: /全部 6 件事件/ }).click()
-  assert.equal(await panel.getByRole('region', { name: '选中日期的事件' }).locator('li').count(), 6)
+  await day(today).getByRole('button', { name: /全部 7 件事件/ }).click()
+  assert.equal(await panel.getByRole('region', { name: '选中日期的事件' }).locator('li').count(), 7)
   pass('独立日程入口无需选择聊天；每日最多五点，+n 打开完整当日列表')
 
   await pool.getByRole('button', { name: '+ 新增待办', exact: true }).click()
@@ -271,6 +289,40 @@ try {
   await nav('日程计划').click()
   await pool.getByRole('button', { name: '联系甲方确认颜色', exact: true }).waitFor()
   assert.equal(await panel.getByText('其他用户的秘密事项', { exact: true }).count(), 0)
+
+  const screenshotChat = history.find(record => record.title.startsWith('截图测试礼盒'))
+  const beforeDelete = await apiRequest('?status=all')
+  const screenshotTasks = beforeDelete.items.filter(item => item.source_record_id === screenshotChat.id)
+  assert.equal(screenshotTasks.length, 1)
+  let warning = ''
+  page.once('dialog', async nativeDialog => { warning = nativeDialog.message(); await nativeDialog.dismiss() })
+  await page.getByRole('button', { name: '删除聊天记录：截图测试礼盒', exact: true }).click()
+  assert.match(warning, /待办池、已排期和已完成事项/)
+  assert.equal((await recordsRequest('/' + screenshotChat.id)).status, 200)
+  assert.equal((await apiRequest('?status=all')).items.filter(item => item.source_record_id === screenshotChat.id).length, 1)
+  pass('取消删除确认后聊天与同步事项都保留')
+
+  await page.route(`**/api/records/${screenshotChat.id}`, route => route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ code: 500, message: '模拟删除失败', data: null }) }))
+  page.once('dialog', async nativeDialog => { warning = nativeDialog.message(); await nativeDialog.accept() })
+  await page.getByRole('button', { name: '删除聊天记录：截图测试礼盒', exact: true }).click()
+  await page.locator('.record-list').getByRole('alert').filter({ hasText: '模拟删除失败' }).waitFor()
+  assert.equal((await recordsRequest('/' + screenshotChat.id)).status, 200)
+  assert.equal((await apiRequest('?status=all')).items.filter(item => item.source_record_id === screenshotChat.id).length, 1)
+  await page.unroute(`**/api/records/${screenshotChat.id}`)
+  pass('删除请求失败时保留聊天与同步日历事项，显示可见错误')
+
+  page.once('dialog', async nativeDialog => { warning = nativeDialog.message(); await nativeDialog.accept() })
+  await page.getByRole('button', { name: '删除聊天记录：截图测试礼盒', exact: true }).click()
+  assert.match(warning, /待办池、已排期和已完成事项/)
+  assert.match(warning, /手工创建的日历事项不受影响/)
+  assert.match(warning, /其他用户日历中的事项也不受影响/)
+  await page.getByRole('status').filter({ hasText: '同步删除 1 条日历事项' }).waitFor()
+  assert.equal((await recordsRequest('/' + screenshotChat.id)).status, 404)
+  const afterDelete = await apiRequest('?status=all')
+  assert.equal(afterDelete.items.some(item => item.source_record_id === screenshotChat.id), false)
+  assert.ok(afterDelete.items.some(item => item.title === '联系甲方确认颜色'))
+  pass('删除聊天前清晰提示日历影响；确认后原子删除聊天及来源任务，其他日历任务保留')
+
   await page.getByRole('button', { name: '退出登录', exact: true }).click()
   await login('calendar_viewer')
   await pool.getByText('没有未排期的待办，去加一个吧', { exact: true }).waitFor()

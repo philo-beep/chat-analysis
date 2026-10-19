@@ -448,6 +448,20 @@ def get_record(record_id: int, user=Depends(permission('records:read'))) -> dict
     return record
 
 
+def delete_record(record_id: int, user) -> dict:
+    import calendar_store
+
+    deleted = calendar_store.delete_owned_record_and_tasks(record_id, user['id'])
+    if deleted is None:
+        raise HTTPException(status_code=404, detail="记录不存在")
+    return deleted
+
+
+@app.delete("/records/{record_id}")
+def delete_record_route(record_id: int, user=Depends(permission('records:write'))) -> dict:
+    return delete_record(record_id, user)
+
+
 @app.put("/records/{record_id}")
 def update_record(record_id: int, payload: SaveRequest, user=Depends(permission('records:write'))) -> dict:
     record = database.get_record(record_id, **_scope(user))
@@ -488,12 +502,17 @@ async def api_analyze(request: Request, user=Depends(permission('analysis:run'))
 
 @app.get('/api/records')
 def api_records(user=Depends(permission('records:read'))):
-    return {'code':0,'message':'ok','data':list_records(user)}
+    return {'code':0,'message':'ok','data':database.list_records(**_scope(user), viewer_id=user['id'])}
 
 
 @app.get('/api/records/{record_id}')
 def api_record(record_id: int, user=Depends(permission('records:read'))):
     return {'code':0,'message':'ok','data':get_record(record_id,user)}
+
+
+@app.delete('/api/records/{record_id}')
+def api_delete_record(record_id: int, user=Depends(permission('records:write'))):
+    return {'code':0,'message':'已删除聊天及其同步日历任务','data':delete_record(record_id,user)}
 
 
 @app.put('/api/records/{record_id}')

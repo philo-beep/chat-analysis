@@ -4,7 +4,9 @@
 
 ## 数据与日期
 
-`task_items` 是唯一任务表，有无 DDL 共用，不改分析结果的 `tasks: string[]` 契约。
+`task_items` 是唯一任务表，有无 DDL 共用，不改分析结果的 `tasks: string[]` 契约。新建分析记录及保存分析结果编辑时，后端会把新的建议任务事务性同步到当前账号的个人日历；已同步的键不会重复创建。建议中明确写有 `DDL: YYYY-MM-DD`、`截止日期：YYYY-MM-DD` 或 `截止时间：YYYY-MM-DD` 时写入 DDL 并按自动等级计算；其他建议进入无 DDL 待办池。相对日期或没有年份的日期不会猜算。启动迁移会一次性补同步旧聊天建议。来源建议后来被编辑或移除时，只新增尚未同步的建议，不自动改写或删除已有日历事项；已有事项属于个人日程，可继续保留其用户设置的 DDL、等级和完成状态，并应在日历中单独管理。
+
+删除历史聊天使用 `DELETE /api/records/{id}`，要求 `records:write` 且只能删除当前账号自己的记录；响应返回 `deleted_calendar_tasks` 数量。仅删除该账号日历中关联的来源待办、排期及已完成事项；手工创建事项和其他用户日历中的导入副本不受影响（来源聊天删除后，其他账号的副本解除来源关联）。删除聊天及该账号任务在同一事务完成。历史列表响应提供逐条 `can_delete` 标记，前端只对当前用户拥有且可删除的记录显示删除按钮。前端执行前展示影响说明并要求用户确认，取消或请求失败都保留原聊天及该账号关联日历事项。
 
 任务字段：`id,title,notes,due_date,start_date,manual_level,created_at,updated_at,completed_at,source_record_id,source_task_key`；计算字段：`effective_start_date,is_manual,completed,urgency_level,is_overdue,date_anomaly`。
 

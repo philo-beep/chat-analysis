@@ -62,6 +62,12 @@ def init_db() -> None:
         conn.execute("CREATE INDEX IF NOT EXISTS idx_records_owner ON records(owner_id, id DESC)")
         from calendar_store import init_schema as init_calendar_schema
         init_calendar_schema(conn)
+        marker = conn.execute("SELECT 1 FROM calendar_migrations WHERE code='record-task-backfill-v1'").fetchone()
+        if marker is None:
+            from calendar_store import sync_existing_record_tasks
+            sync_existing_record_tasks(conn)
+            conn.execute("INSERT INTO calendar_migrations (code,applied_at) VALUES ('record-task-backfill-v1',?)",
+                         (datetime.now().astimezone().isoformat(timespec="seconds"),))
 
 
 def save_record(
@@ -79,18 +85,33 @@ def save_record(
              json.dumps(source_input, ensure_ascii=False) if source_input is not None else None,
              source_image, source_transcript, owner_id),
         )
-        return int(cur.lastrowid)
+        record_id = int(cur.lastrowid)
+        from calendar_store import sync_record_tasks
+        sync_record_tasks(conn, owner_id, record_id, result)
+        return record_id
 
 
-def list_records(*, owner_id: int | None = None, include_all: bool = True) -> list[dict]:
+def list_records(*, owner_id: int | None = None, include_all: bool = True,
+                 viewer_id: int | None = None) -> list[dict]:
+    fields = "id, title, created_at, updated_at"
+    args: tuple = ()
+    if viewer_id is not None:
+        fields += ", (owner_id = ?) AS can_delete"
+        args = (viewer_id,)
+    if not include_all:
+        args += (owner_id,)
     with _connect() as conn:
         rows = conn.execute(
-            "SELECT id, title, created_at, updated_at FROM records"
+            "SELECT " + fields + " FROM records"
             + ("" if include_all else " WHERE owner_id = ?")
             + " ORDER BY id DESC LIMIT 100",
-            () if include_all else (owner_id,),
+            args,
         ).fetchall()
-    return [dict(row) for row in rows]
+    records = [dict(row) for row in rows]
+    if viewer_id is not None:
+        for record in records:
+            record["can_delete"] = bool(record["can_delete"])
+    return records
 
 
 def get_record(record_id: int, *, owner_id: int | None = None, include_all: bool = True) -> dict | None:
@@ -130,4 +151,9 @@ def update_result(record_id: int, result: dict, *, owner_id: int | None = None, 
             (json.dumps(result, ensure_ascii=False), now, record_id)
             + (() if include_all else (owner_id,)),
         )
+        if cur.rowcount:
+            row = conn.execute("SELECT owner_id FROM records WHERE id=?", (record_id,)).fetchone()
+            if row is not None:
+                from calendar_store import sync_record_tasks
+                sync_record_tasks(conn, row["owner_id"], record_id, result)
         return cur.rowcount > 0

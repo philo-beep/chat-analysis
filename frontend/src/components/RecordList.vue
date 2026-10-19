@@ -6,11 +6,13 @@ const props = defineProps({
   records: { type: Array, default: () => [] },
   loading: { type: Boolean, default: false },
   error: { type: String, default: '' },
+  notice: { type: String, default: '' },
   selectedId: { type: Number, default: null },
   activeSection: { type: String, default: 'workspace' },
+  allowDelete: { type: Boolean, default: false },
 })
 
-defineEmits(['select', 'refresh', 'shortcut'])
+defineEmits(['select', 'refresh', 'shortcut', 'delete'])
 </script>
 
 <template>
@@ -21,15 +23,21 @@ defineEmits(['select', 'refresh', 'shortcut'])
         <AppIcon name="refresh" :size="14" />
       </button>
     </header>
+    <p v-if="props.notice" class="record-notice" role="status">{{ props.notice }}</p>
     <p v-if="props.error" class="error" role="alert">{{ props.error }}</p>
     <p v-else-if="props.loading && !props.records.length" class="empty">正在加载历史记录…</p>
     <div v-else-if="!props.records.length" class="empty"><AppIcon name="file" :size="27" /><p>还没有记录</p><span>完成分析后，需求单将保存在这里</span></div>
     <ul>
       <li v-for="record in props.records" :key="record.id">
-        <button class="item" :class="{ selected: record.id === props.selectedId }" :aria-pressed="record.id === props.selectedId" :disabled="props.loading" @click="$emit('select', record)">
-          <span class="title">{{ record.title || '未命名' }}</span>
-          <span class="time"><AppIcon name="clock" :size="11" />{{ record.created_at }}</span>
-        </button>
+        <div class="record-row">
+          <button class="item" :class="{ selected: record.id === props.selectedId }" :aria-pressed="record.id === props.selectedId" :disabled="props.loading" @click="$emit('select', record)">
+            <span class="title">{{ record.title || '未命名' }}</span>
+            <span class="time"><AppIcon name="clock" :size="11" />{{ record.created_at }}</span>
+          </button>
+          <button v-if="props.allowDelete && record.can_delete === true" class="delete-record" type="button" :aria-label="`删除聊天记录：${record.title || '未命名'}`" :disabled="props.loading" @click="$emit('delete', record)">
+            <AppIcon name="trash" :size="14" />
+          </button>
+        </div>
         <div v-if="record.id === props.selectedId" class="record-shortcuts" role="group" :aria-label="`${record.title || '未命名'}的快捷入口`">
           <button
             v-for="item in directorySections"
@@ -59,9 +67,13 @@ h2 span { font-size: 10px; margin-left: 7px; background: #ffffff0c; padding: 1px
 .refresh-button { color: #8b9ebd; border: 0; padding: 3px; min-height: 24px; }
 .refresh-button:hover:not(:disabled) { background: #ffffff0d; color: #d1dfff; }
 ul { list-style: none; padding: 0; margin: 0; }
-.item { width: 100%; text-align: left; align-items: flex-start; display: flex; flex-direction: column; gap: 8px; padding: 13px 12px; margin-bottom: 4px; background: none; border: 1px solid transparent; color: #becbe0; }
+.record-row { display: flex; align-items: stretch; gap: 2px; }
+.item { flex: 1; min-width: 0; width: auto; text-align: left; align-items: flex-start; display: flex; flex-direction: column; gap: 8px; padding: 13px 12px; margin-bottom: 4px; background: none; border: 1px solid transparent; color: #becbe0; }
 .item:hover:not(:disabled) { background: #ffffff08; border-color: #ffffff08; }
 .item.selected { background: #25406480; border-color: #5576ae45; color: #e2ecff; }
+.delete-record { flex: 0 0 30px; align-self: center; min-width: 30px; min-height: 30px; padding: 5px; border: 0; background: transparent; color: #8b9ebd; }
+.delete-record:hover:not(:disabled) { color: #ffaaa5; background: #ffffff0d; }
+.record-notice { margin: 6px 8px; color: #a8d6c2; font-size: 10px; line-height: 1.5; }
 .record-shortcuts { display: flex; flex-direction: column; gap: 3px; padding: 1px 8px 8px; }
 .record-shortcut { display: flex; align-items: center; gap: 7px; width: 100%; min-height: 28px; padding: 5px 8px; border: 1px solid transparent; background: none; color: #91a7c8; text-align: left; font-size: 11px; }
 .record-shortcut:hover:not(:disabled) { color: #d1dfff; background: #ffffff08; }
@@ -72,5 +84,5 @@ ul { list-style: none; padding: 0; margin: 0; }
 .empty { text-align: center; padding: 27px 10px; color: #536d93; background: #ffffff02; border: 1px dashed #ffffff0b; border-radius: 8px; margin: 0 4px; }
 .empty p { margin: 10px 0 5px; font-size: 12px; color: #899bb6; }
 .empty span { display: block; font-size: 10px; line-height: 1.9; color: #627a9c; }
-@media (max-width: 760px) { .record-list { margin: 18px 0 0; max-height: 156px; } header { margin: 0 0 5px; } .empty { padding: 8px; text-align: left; border: 0; background: transparent; } .empty > svg, .empty span { display: none; } .empty p { margin: 0; font-size: 11px; } ul { display: flex; gap: 8px; overflow-x: auto; } li { min-width: 180px; max-width: 210px; flex-shrink: 0; } .item { padding: 8px; margin: 0; } .record-shortcuts { flex-direction: row; flex-wrap: wrap; gap: 3px; padding: 3px 4px 5px; } .record-shortcut { width: auto; min-height: 24px; padding: 3px 5px; gap: 4px; font-size: 10px; } }
+@media (max-width: 760px) { .record-list { margin: 18px 0 0; max-height: 156px; } header { margin: 0 0 5px; } .empty { padding: 8px; text-align: left; border: 0; background: transparent; } .empty > svg, .empty span { display: none; } .empty p { margin: 0; font-size: 11px; } ul { display: flex; gap: 8px; overflow-x: auto; } li { min-width: 180px; max-width: 240px; flex-shrink: 0; } .item { padding: 8px; margin: 0; } .record-shortcuts { flex-direction: row; flex-wrap: wrap; gap: 3px; padding: 3px 4px 5px; } .record-shortcut { width: auto; min-height: 24px; padding: 3px 5px; gap: 4px; font-size: 10px; } }
 </style>

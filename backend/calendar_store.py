@@ -2,12 +2,17 @@
 
 import hashlib
 import json
+import re
 from datetime import date, datetime, timedelta, timezone
 
 import database
 
 BUSINESS_TZ = timezone(timedelta(hours=8), "Asia/Shanghai")
 TIMEZONE = "Asia/Shanghai"
+_EXPLICIT_DUE_DATE = re.compile(
+    r"(?:\bDDL\b|截止日期|截止时间)\s*[:：]?\s*(\d{4}-\d{2}-\d{2})",
+    re.IGNORECASE,
+)
 
 
 class CalendarError(Exception):
@@ -40,6 +45,7 @@ def init_schema(conn) -> None:
         UNIQUE(owner_id, source_task_key))""")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_task_items_schedule ON task_items(owner_id, completed_at, due_date)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_task_items_source ON task_items(source_record_id)")
+    conn.execute("CREATE TABLE IF NOT EXISTS calendar_migrations (code TEXT PRIMARY KEY, applied_at TEXT NOT NULL)")
 
 
 def serialize(row, reference: date | None = None) -> dict:
@@ -79,6 +85,73 @@ def _insert(conn, owner_id, values, *, source_record_id=None, source_task_key=No
         (owner_id, values["title"], values.get("notes", ""), values.get("due_date"),
          values.get("manual_level"), timestamp, timestamp, source_record_id, source_task_key))
     return serialize(_get(conn, owner_id, cursor.lastrowid))
+
+
+def _task_due_date(text: str) -> str | None:
+    """Only schedule suggestions that state an unambiguous ISO deadline."""
+    match = _EXPLICIT_DUE_DATE.search(text)
+    if not match:
+        return None
+    try:
+        return date.fromisoformat(match.group(1)).isoformat()
+    except ValueError:
+        return None
+
+
+def sync_record_tasks(conn, owner_id: int | None, record_id: int, result: dict) -> int:
+    """Create one idempotently linked calendar task per valid saved suggestion."""
+    tasks = result.get("tasks") if isinstance(result, dict) else None
+    if owner_id is None or not isinstance(tasks, list):
+        return 0
+    inserted = 0
+    for index, text in enumerate(tasks):
+        if not isinstance(text, str):
+            continue
+        title = text.strip()
+        if not title or len(title) > 5000:
+            continue
+        key = f"{record_id}:{index}:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
+        if conn.execute("SELECT 1 FROM task_items WHERE owner_id=? AND source_task_key=?",
+                        (owner_id, key)).fetchone():
+            continue
+        _insert(conn, owner_id,
+                {"title": title[:200], "notes": title if len(title) > 200 else "",
+                 "due_date": _task_due_date(title), "manual_level": None},
+                source_record_id=record_id, source_task_key=key)
+        inserted += 1
+    return inserted
+
+
+def sync_existing_record_tasks(conn) -> int:
+    """Backfill analyzed chats saved before calendar sync existed."""
+    rows = conn.execute("SELECT id,owner_id,result FROM records WHERE owner_id IS NOT NULL").fetchall()
+    inserted = 0
+    for row in rows:
+        try:
+            result = json.loads(row["result"])
+        except (json.JSONDecodeError, TypeError):
+            continue
+        inserted += sync_record_tasks(conn, row["owner_id"], row["id"], result)
+    return inserted
+
+
+def delete_owned_record_and_tasks(record_id: int, owner_id: int) -> dict | None:
+    """Delete an owner's chat and every linked calendar task atomically."""
+    with database._connect() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        record = conn.execute("SELECT id FROM records WHERE id=? AND owner_id=?",
+                              (record_id, owner_id)).fetchone()
+        if record is None:
+            return None
+        # Calendar rows belong to their own user. An admin may import another
+        # user's suggestion into their personal calendar; deleting the source
+        # chat must not delete that independent personal copy.
+        linked = conn.execute("SELECT COUNT(*) FROM task_items WHERE source_record_id=? AND owner_id=?",
+                              (record_id, owner_id)).fetchone()[0]
+        conn.execute("DELETE FROM task_items WHERE source_record_id=? AND owner_id=?",
+                     (record_id, owner_id))
+        conn.execute("DELETE FROM records WHERE id=? AND owner_id=?", (record_id, owner_id))
+        return {"id": record_id, "deleted": True, "deleted_calendar_tasks": linked}
 
 
 def create_item(owner_id: int, values: dict) -> dict:

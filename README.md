@@ -2,7 +2,9 @@
 
 输入一段聊天原文，输出结构化结果：**需求**、**待确认问题**、**建议待办**、**回复草稿**。
 
-本项目由一个共享代码仓库承载，每人负责一块，每天多次合并验证。
+当前版本包含登录注册与权限校验、文本/截图聊天分析、历史记录与内容目录、原文折叠、编辑导出、个人日历/待办池/甘特图，以及聊天删除与关联日历任务联动。完整运行需要后端与前端同时启动，并配置有调用权限的云端 AI Key。
+
+GitHub 默认 `main` 分支为完整交付版本。运行代码已在仓库中，不需要原始压缩包或桌面模型目录；用户数据和凭据需要在新机器上重新建立。
 
 ## 目录结构
 
@@ -36,14 +38,26 @@
 
 ## 环境准备与启动
 
-### 后端
+已验证环境：Windows、Python 3.14.7、Node.js 24.21.0（npm 11.19.0）。以下命令使用 PowerShell；macOS/Linux 的虚拟环境 Python 路径改为 `backend/.venv/bin/python`。首次安装需要联网。
 
-```bash
+### 下载与配置
+
+```powershell
+git clone https://github.com/philo-beep/chat-analysis.git
+cd chat-analysis
+python -m venv backend/.venv
+.\backend\.venv\Scripts\python.exe -m pip install -r backend/requirements.txt -c backend/constraints.txt
+Copy-Item backend/.env.example backend/.env
+notepad backend/.env
+```
+
+在本机 `backend/.env` 填写 `FOLLOWUP_API_KEY`。模板已给出当前服务地址、模型 `gpt-6.1-sol` 和推理强度 `medium`。需要该服务有效凭据和模型调用权限；仓库不附带共享密钥。没有配置 Key 时，登录、历史和日历仍可使用，实际 AI 分析会失败并提示重试。
+
+### 后端（第一个终端）
+
+```powershell
 cd backend
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn main:app --reload --port 8000
+.\.venv\Scripts\python.exe -m uvicorn main:app --host 127.0.0.1 --port 8000
 ```
 
 后端地址：http://127.0.0.1:8000 ，接口文档：http://127.0.0.1:8000/docs
@@ -65,19 +79,19 @@ cd backend
 
 ```bash
 cd frontend
-npm install
-npm run dev
+npm ci
+npm run dev -- --host 127.0.0.1 --port 5173 --strictPort
 ```
 
 前端地址：http://127.0.0.1:5173
 
 ### 配置
 
-本项目使用本地模型，不调用线上千问 API，也不需要线上千问密钥。D 维护本地文本模型和 Qwen 截图服务的配置；按其配置说明使用本机模型目录和本地服务地址。
+当前版本按用户指定使用云端模型。旧的本地 NB/Qwen 说明及历史报告仅记录早期版本，不是当前运行依赖。
 
-文本分析使用仓库附带、来自用户 `ai_followup_trainer` 的字符 n-gram NB 模型及项目规则适配层，不需要启动大模型。截图需要先启动本机 Ollama，并确认 `ollama list` 含 `qwen2.5vl:7b`；默认服务地址为 `http://127.0.0.1:11434`。可将 `backend/.env.example` 复制为 `backend/.env` 修改本机配置，修改后重启后端。
+文本分析与聊天截图转录使用已接入仓库源码的云端 AI 服务。请在被 Git 忽略的 `backend/.env` 中配置 `FOLLOWUP_API_KEY`、`FOLLOWUP_BASE_URL`、`FOLLOWUP_MODEL` 和 `FOLLOWUP_REASONING_EFFORT`；当前模型按用户指定为 `gpt-6.1-sol`，推理强度为 `medium`。修改配置后重启后端。
 
-这次适配未执行 Qwen LoRA 训练。截图由本地 Qwen 逐字转录，再交给相同文本分析流程；页面保留原图和转录供核对。首次加载及截图识别耗时明显高于文本，等待期间页面会显示加载状态。配置、模型来源及适用边界见 [docs/local-model.md](docs/local-model.md)。
+截图先逐字转录，再进行结构化分析；页面保留原图和转录供核对。默认开启同模型质量复核，文本分析有两次模型请求，截图分析有三次，实际等待时间取决于供应商响应。AI 调用失败会提示重试，不用假数据替代。配置说明见 [docs/local-model.md](docs/local-model.md)。
 
 **密钥和本地数据库不提交到仓库**，配置模板可以共享。
 
@@ -87,7 +101,7 @@ npm run dev
 
 ```powershell
 python -m venv .venv-c
-.\.venv-c\Scripts\python.exe -m pip install -r backend/requirements-dev.txt
+.\.venv-c\Scripts\python.exe -m pip install -r backend/requirements-dev.txt -c backend/constraints.txt
 .\.venv-c\Scripts\python.exe -B -m unittest discover -s backend/tests -v
 .\.venv-c\Scripts\python.exe -B backend/tests/smoke_http.py
 ```
@@ -99,11 +113,13 @@ python -m venv .venv-c
 
 前端已接入编辑保存、历史和服务端导出。真实业务分析由 D 维护，所有代码合并后由 E 执行文档中的文本、截图和浏览器完整流程验收。
 
-真实模型验收（使用临时数据库，`--images` 会实际调用本地 Qwen，不注入模型替身）：
+真实模型验收（使用临时数据库，`--images` 会实际调用已配置的云端模型并消耗供应商额度，不注入模型替身）：
 
 ```powershell
 backend/.venv/Scripts/python.exe -B backend/tests/check_acceptance.py --images --output "$env:TEMP/keyoushu-acceptance.json"
 ```
+
+前端验证在 `frontend` 目录执行 `npm test`、`npm run build`。浏览器验收执行 `npm run test:browser`，两组测试顺序运行，使用临时数据库及端口 18000/15173，不调用云端 AI。Windows 默认使用已安装的 Edge；无 Edge 时先执行 `npx playwright install chromium` 下载测试浏览器。可用 `EDGE_EXECUTABLE` 指定浏览器路径、`PYTHON_EXECUTABLE` 指定后端 Python；不需要本机 Codex 工具目录。
 
 输入和合成截图位于 `samples/acceptance-cases.json` 与 `samples/screenshots/`；检查结果与实际转录写入指定 JSON，任一检查失败时退出码为 1。
 

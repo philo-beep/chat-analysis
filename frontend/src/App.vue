@@ -14,14 +14,16 @@ import ScreenshotList from './components/ScreenshotList.vue'
 import CalendarPanel from './components/CalendarPanel.vue'
 import { directorySections, hashForSection, routeFromHash, sectionFromHash } from './navigation.js'
 import { buildRecordViews, loadRecordDetails } from './recordViews.js'
-import { analyze, getRecord, listRecords, getCurrentUser, logout, trackPageView, importCalendarTask } from './api.js'
+import { analyze, getRecord, listRecords, deleteRecord, getCurrentUser, logout, trackPageView, importCalendarTask } from './api.js'
 import { currentUser, sessionVersion, getAuthToken, establishSession, restoreSessionUser, clearSession } from './auth.js'
 
 const records = ref([])
+const calendarPanel = ref(null)
 const result = ref(null)
 const loading = ref(false)
 const error = ref('')
 const historyError = ref('')
+const historyNotice = ref('')
 const recordId = ref(null)
 const recordsLoading = ref(false)
 const originalText = ref('')
@@ -110,6 +112,47 @@ async function addSuggestionToCalendar(item) {
   } finally {
     if (isCurrent(version)) panelBusy.value = false
   }
+}
+
+async function removeHistoryRecord(record) {
+  if (!canWrite.value || loading.value || panelBusy.value) return
+  const confirmed = window.confirm(
+    `删除聊天记录“${record.title || '未命名'}”后，将同时删除你个人日历中从这份聊天同步的事项，包括待办池、已排期和已完成事项。手工创建的日历事项不受影响，其他用户日历中的事项也不受影响。删除后无法恢复。\n\n确定继续删除吗？`,
+  )
+  if (!confirmed) return
+  const version = sessionVersion.value
+  panelBusy.value = true
+  historyError.value = ''
+  historyNotice.value = ''
+  try {
+    const response = await deleteRecord(record.id)
+    if (!isCurrent(version)) return
+    records.value = records.value.filter((item) => item.id !== record.id)
+    directoryRecords.value = directoryRecords.value.filter((item) => item.id !== record.id)
+    directoryCache.delete(record.id)
+    if (scopedRecord.value?.id === record.id) scopedRecord.value = null
+    if (recordId.value === record.id) {
+      recordId.value = null
+      result.value = null
+      originalText.value = ''
+      sourceImage.value = ''
+      try { localStorage.removeItem(`keyoushu.lastRecordId.${currentUser.value.id}`) } catch { /* 缓存不可用不影响删除。 */ }
+    }
+    if (directoryRecordId.value === record.id) {
+      directoryRecordId.value = null
+      section.value = 'workspace'
+      scopeMode.value = 'current'
+      window.location.hash = hashForSection('workspace')
+    }
+    calendarPanel.value?.refresh()
+    historyNotice.value = `聊天记录已删除，同步删除 ${response.deleted_calendar_tasks || 0} 条日历事项。`
+    directoryLoaded.value = false
+  } catch (e) {
+    if (isCurrent(version)) historyError.value = `删除聊天记录失败：${e.message}`
+  } finally {
+    if (isCurrent(version)) panelBusy.value = false
+  }
+  if (isCurrent(version) && !historyError.value) await refreshRecords()
 }
 
 function changeScope(mode) {
@@ -325,6 +368,7 @@ async function openRecord(record) {
 }
 
 function resetWorkspace() {
+  historyNotice.value = ''
   calendarImportMessage.value = ''
   calendarImportError.value = ''
   scopedEpoch += 1
@@ -440,10 +484,13 @@ restoreLogin()
         :records="records"
         :loading="recordsLoading || loading || panelBusy"
         :error="historyError"
+        :notice="historyNotice"
         :selected-id="shortcutRecordId"
         :active-section="directoryRecordId ? section : ''"
+        :allow-delete="canWrite"
         @select="openDirectoryRecord"
         @shortcut="openHistoryShortcut"
+        @delete="removeHistoryRecord"
         @refresh="refreshRecords"
       />
       <SidebarDirectories :section="section" :counts="directoryCounts" :disabled="loading || panelBusy" :record-id="shortcutRecordId" :record-title="shortcutRecordTitle" :scope="scopeMode" @navigate="navigateDirectory" @scope="changeScope" />
@@ -452,7 +499,7 @@ restoreLogin()
     <main class="main">
       <header class="topbar"><span>工作空间 <span class="breadcrumb-divider">/</span> <strong>{{ sectionTitle }}</strong></span><div class="session-tools"><span>{{ currentUser.username }}</span><button v-if="canViewAdmin" type="button" :disabled="loading || panelBusy" @click="navigate(section === 'admin' ? 'workspace' : 'admin')">{{ section === 'admin' ? '返回工作台' : '后台统计' }}</button><button type="button" :disabled="loggingOut" @click="handleLogout">{{ loggingOut ? '退出中…' : '退出登录' }}</button></div></header>
       <div v-if="section === 'admin' && canViewAdmin" class="workspace"><AdminPanel /></div>
-      <div v-if="isCalendar" class="workspace"><CalendarPanel :key="sessionVersion" :view="section === 'calendar/gantt' ? 'gantt' : 'calendar'" :disabled="!canWrite" @navigate="navigate" @busy="handlePanelBusy" /></div>
+      <div v-if="isCalendar" class="workspace"><CalendarPanel ref="calendarPanel" :key="sessionVersion" :view="section === 'calendar/gantt' ? 'gantt' : 'calendar'" :disabled="!canWrite" @navigate="navigate" @busy="handlePanelBusy" /></div>
       <div v-if="directoryComponent" class="workspace">
         <p v-if="section === 'tasks' && calendarImportMessage" role="status">{{ calendarImportMessage }}</p>
         <p v-if="section === 'tasks' && calendarImportError" class="error" role="alert">{{ calendarImportError }}</p>

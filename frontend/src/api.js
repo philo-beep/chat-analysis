@@ -142,11 +142,15 @@ export function analyze(input) {
 }
 
 export function listRecords() {
-  return request('/records')
+  return authRequest('/api/records')
 }
 
 export function getRecord(id) {
   return request(`/records/${id}`)
+}
+
+export function deleteRecord(id) {
+  return authRequest(`/api/records/${id}`, { method: 'DELETE' })
 }
 
 export function saveRecord(id, result) {

@@ -1,6 +1,7 @@
 // 用临时 SQLite 和真实 HTTP 接口验证；不会改用户 app.db，也不调用图片模型。
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -8,6 +9,8 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = fileURLToPath(new URL('../..', import.meta.url))
+const defaultPython = resolve(root, process.platform === 'win32' ? 'backend/.venv/Scripts/python.exe' : 'backend/.venv/bin/python')
+const edgePath = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
 const require = createRequire(import.meta.url)
 const { chromium } = require(process.env.PLAYWRIGHT_NODE_MODULES
   ? resolve(process.env.PLAYWRIGHT_NODE_MODULES, 'playwright') : 'playwright')
@@ -43,6 +46,7 @@ import auth_store
 user = auth_store.create_user('directory_tester', 'Directory-test-2026', ['member'])
 auth_store.create_user('directory_empty', 'Directory-test-2026', ['member'])
 other = auth_store.create_user('directory_other', 'Directory-test-2026', ['member'])
+admin = auth_store.create_user('directory_admin', 'Directory-test-2026', ['admin'])
 result = dict(requirements=[dict(field='品类', value='礼盒', evidence='礼盒')], questions=['交货日期是否确定？'], tasks=['联系甲方确认颜色', '周五提交报价'], reply='已收到礼盒需求。', is_sample=False)
 text = '长对话测试礼盒\\n' + ('甲：请确认礼盒报价与交期。\\n乙：周五提供方案，请先确认颜色。\\n' * 100) + '原文末尾标记'
 database.save_record(text, result, source_input={'text': text}, owner_id=user['id'])
@@ -51,6 +55,7 @@ Image.new('RGB', (60, 100), 'white').save(stream, format='PNG')
 image = 'data:image/png;base64,' + base64.b64encode(stream.getvalue()).decode()
 database.save_record('截图测试礼盒', dict(requirements=[], questions=[], tasks=['核对截图与转录'], reply='请核对截图。', is_sample=False), source_image=image, source_transcript='甲：请确认礼盒。乙：收到。', owner_id=user['id'])
 database.save_record('其他账号记录', dict(requirements=[], questions=[], tasks=['不应泄露的任务'], reply='', is_sample=False), owner_id=other['id'])
+database.save_record('管理员自有记录', dict(requirements=[], questions=[], tasks=[], reply='', is_sample=False), owner_id=admin['id'])
 import main, uvicorn
 from fastapi.middleware.cors import CORSMiddleware
 app = CORSMiddleware(main.app, allow_origins=['http://127.0.0.1:15173'], allow_methods=['*'], allow_headers=['*'])
@@ -63,7 +68,7 @@ try {
     try { await fetch(url); occupied = true } catch {}
     assert.equal(occupied, false, '测试端口已占用：' + url)
   }
-  const backend = start(process.env.PYTHON_EXECUTABLE || resolve(root, 'backend/.venv/Scripts/python.exe'),
+  const backend = start(process.env.PYTHON_EXECUTABLE || defaultPython,
     ['-B', '-c', seed, resolve(temp, 'test.db')], resolve(root, 'backend'), {
       KEYOUSHU_JWT_SECRET: 'isolated-directory-browser-test-secret-2026', PYTHONIOENCODING: 'utf-8',
     })
@@ -71,7 +76,7 @@ try {
   const frontend = start(process.execPath, [resolve(root, 'frontend/node_modules/vite/bin/vite.js'), '--host', '127.0.0.1', '--port', '15173', '--strictPort'],
     resolve(root, 'frontend'), { VITE_API_BASE: api })
   await ready(ui, frontend)
-  browser = await chromium.launch({ executablePath: process.env.EDGE_EXECUTABLE || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true })
+  browser = await chromium.launch({ executablePath: process.env.EDGE_EXECUTABLE || (existsSync(edgePath) ? edgePath : undefined), headless: true })
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, acceptDownloads: true })
   const page = await context.newPage()
   page.on('pageerror', (error) => errors.push(error.message))
@@ -211,6 +216,13 @@ try {
   await content.getByRole('button', { name: '刷新', exact: true }).click()
   await content.getByText('交货日期是否确定？', { exact: true }).waitFor()
   pass('列表失败不误报空数据，切换分类保留错误，重试可恢复')
+
+  await page.getByRole('button', { name: '退出登录', exact: true }).click()
+  await login('directory_admin')
+  await page.locator('.record-list .item').filter({ hasText: '其他账号记录' }).waitFor()
+  assert.equal(await page.getByRole('button', { name: '删除聊天记录：其他账号记录', exact: true }).count(), 0)
+  assert.equal(await page.getByRole('button', { name: '删除聊天记录：管理员自有记录', exact: true }).count(), 1)
+  pass('管理员可查看全部聊天，但只显示本人聊天记录的删除操作')
   assert.deepEqual(errors, [])
   await writeFile(resolve(temp, 'results.json'), JSON.stringify({ checks, errors, fixture: '临时数据库中的合成测试记录，非模型分析验收' }, null, 2))
   console.log('Evidence: ' + temp)
