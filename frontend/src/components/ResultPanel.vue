@@ -157,13 +157,15 @@ async function exportJson() {
     </p>
     <p v-else-if="draft.is_sample !== false" class="hint">旧记录未标注分析来源，请核对原文。</p>
     <div class="result-overview"><div><span>已梳理需求</span><strong>{{ draft.requirements.length }}<small>项</small></strong></div><div><span>待确认问题</span><strong>{{ draft.questions.length }}<small>项</small></strong></div><div><span>建议待办</span><strong>{{ draft.tasks.length }}<small>项</small></strong></div></div>
-    <details open class="original">
-      <summary>原始聊天记录（用于核对依据）</summary>
+    <details :key="`${sessionKey}:${recordId}`" class="original">
+      <summary>原始聊天记录（用于核对依据）<span class="original-toggle"><span class="when-closed">展开原文</span><span class="when-open">收起原文</span></span></summary>
+      <div class="original-content" tabindex="0" aria-label="原始聊天记录，可滚动查看完整内容">
       <figure v-if="sourceImage" class="source-image">
         <img :src="sourceImage" alt="此记录上传的原始聊天截图，可与下方识别文字核对" />
         <figcaption>原始聊天截图</figcaption>
       </figure>
       <pre>{{ originalText || '暂无可核对的文字原文；截图解析完成后可在此查看识别文本。' }}</pre>
+      </div>
     </details>
 
     <fieldset :disabled="locked">
@@ -244,6 +246,11 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 .sample-flag { padding: 12px; border: 2px solid #f59e0b; background: #fffbeb; color: #92400e; border-radius: 6px; font-weight: 600; }
 .original { background: #fafbfd; border: 1px solid var(--line); border-radius: 8px; padding: 13px 16px; font-size: 12px; color: #7d8aa0; }
 summary { cursor: pointer; color: #61738f; font-size: 12px; }
+.original-toggle { float: right; margin-left: 12px; color: #5374a7; }
+.original .when-open, .original[open] .when-closed { display: none; }
+.original[open] .when-open { display: inline; }
+.original-content { max-height: min(60vh, 480px); overflow: auto; margin-top: 12px; scrollbar-gutter: stable; }
+.original-content:focus-visible { outline: 2px solid #7190cb; outline-offset: 3px; }
 .source-image { margin: 12px 0; }
 .source-image img { display: block; max-width: 100%; max-height: 480px; width: auto; height: auto; object-fit: contain; }
 .source-image figcaption { margin-top: 6px; color: #64748b; font-size: 14px; }

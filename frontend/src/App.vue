@@ -1,12 +1,18 @@
 <!-- 页面总入口，A 负责 -->
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import ChatInput from './components/ChatInput.vue'
 import RecordList from './components/RecordList.vue'
 import ResultPanel from './components/ResultPanel.vue'
 import AppIcon from './components/AppIcon.vue'
 import LoginPanel from './components/LoginPanel.vue'
 import AdminPanel from './components/AdminPanel.vue'
+import SidebarDirectories from './components/SidebarDirectories.vue'
+import TaskList from './components/TaskList.vue'
+import QuestionList from './components/QuestionList.vue'
+import ScreenshotList from './components/ScreenshotList.vue'
+import { directorySections, hashForSection, sectionFromHash } from './navigation.js'
+import { buildRecordViews, loadRecordDetails } from './recordViews.js'
 import { analyze, getRecord, listRecords, getCurrentUser, logout, trackPageView } from './api.js'
 import { currentUser, sessionVersion, getAuthToken, establishSession, restoreSessionUser, clearSession } from './auth.js'
 
@@ -25,8 +31,86 @@ const authChecking = ref(false)
 const notice = ref('')
 const restoreFailed = ref(false)
 const loggingOut = ref(false)
-const section = ref('workspace')
+const section = ref(sectionFromHash(window.location.hash))
 const canViewAdmin = computed(() => currentUser.value?.permissions?.includes('admin:stats'))
+const sectionTitle = computed(() => directorySections.find((item) => item.key === section.value)?.label || (section.value === 'admin' ? '网站后台统计' : '需求工作台'))
+const directoryComponent = computed(() => ({ tasks: TaskList, questions: QuestionList, screenshots: ScreenshotList })[section.value])
+const directoryRecords = ref([])
+const directoryLoading = ref(false)
+const directoryLoaded = ref(false)
+const directoryError = ref('')
+const directoryFailures = ref([])
+const directoryProgress = ref(0)
+const workspaceReady = ref(false)
+const directoryCache = new Map()
+let directoryEpoch = 0
+const recordViews = computed(() => buildRecordViews(directoryRecords.value))
+const directoryCounts = computed(() => directoryLoaded.value && !directoryFailures.value.length
+  ? Object.fromEntries(Object.entries(recordViews.value).map(([key, items]) => [key, items.length])) : null)
+
+function navigate(next) {
+  if (loading.value || panelBusy.value) return
+  section.value = sectionFromHash(hashForSection(next), canViewAdmin.value)
+  if (window.location.hash !== hashForSection(section.value)) window.location.hash = hashForSection(section.value)
+}
+
+function syncNavigation() {
+  if (loading.value || panelBusy.value) {
+    window.history.replaceState(null, '', hashForSection(section.value))
+    return
+  }
+  section.value = sectionFromHash(window.location.hash, canViewAdmin.value)
+}
+window.addEventListener('hashchange', syncNavigation)
+onBeforeUnmount(() => window.removeEventListener('hashchange', syncNavigation))
+
+async function loadDirectory() {
+  if (!currentUser.value || !workspaceReady.value || recordsLoading.value || directoryLoading.value || directoryLoaded.value) return
+  if (historyError.value) {
+    directoryError.value = historyError.value
+    return
+  }
+  const version = sessionVersion.value
+  const epoch = ++directoryEpoch
+  const active = () => isCurrent(version) && epoch === directoryEpoch
+  directoryLoading.value = true
+  directoryError.value = ''
+  directoryProgress.value = 0
+  try {
+    const loaded = await loadRecordDetails(records.value, getRecord, {
+      cache: directoryCache, isCurrent: active,
+      onProgress: (count) => { if (active()) directoryProgress.value = count },
+    })
+    if (!active()) return
+    directoryRecords.value = loaded.records
+    directoryFailures.value = loaded.failures
+    directoryLoaded.value = true
+  } catch (e) {
+    if (active()) directoryError.value = `分类加载失败：${e.message}`
+  } finally {
+    if (active()) directoryLoading.value = false
+  }
+}
+
+async function refreshDirectory() {
+  if (directoryLoading.value || loading.value || panelBusy.value || recordsLoading.value) return
+  const version = sessionVersion.value
+  directoryCache.clear()
+  if (await refreshRecords()) await loadDirectory()
+  else if (isCurrent(version)) directoryError.value = historyError.value
+}
+
+async function openDirectoryRecord(record) {
+  if (loading.value || panelBusy.value) return
+  const version = sessionVersion.value
+  navigate('workspace')
+  // 当前记录保持挂载及编辑草稿；点击同一来源不重新读取以免覆盖未保存内容。
+  if (isCurrent(version) && record.id !== recordId.value) await openRecord(record)
+}
+
+watch([section, workspaceReady, recordsLoading], () => {
+  if (directoryComponent.value && workspaceReady.value && !recordsLoading.value) loadDirectory()
+})
 
 function isCurrent(version) {
   return !!currentUser.value && sessionVersion.value === version
@@ -42,6 +126,7 @@ function showRecord(record) {
   result.value = record.result
   originalText.value = record.text || ''
   sourceImage.value = record.source_image || ''
+  directoryCache.set(record.id, { updatedAt: record.updated_at, record })
   rememberRecord(record.id)
 }
 
@@ -92,15 +177,22 @@ async function handleAnalyze(payload) {
 }
 
 async function refreshRecords() {
-  if (!currentUser.value) return
+  if (!currentUser.value) return false
   const version = sessionVersion.value
+  directoryEpoch += 1
+  directoryLoading.value = false
+  directoryLoaded.value = false
   recordsLoading.value = true
   historyError.value = ''
   try {
     const response = await listRecords()
-    if (isCurrent(version)) records.value = response
+    if (!isCurrent(version)) return false
+    records.value = response
+    directoryError.value = ''
+    return true
   } catch (e) {
     if (isCurrent(version)) historyError.value = e instanceof Error ? `历史记录加载失败：${e.message}` : '历史记录加载失败，请重试'
+    return false
   } finally {
     if (isCurrent(version)) recordsLoading.value = false
   }
@@ -122,6 +214,15 @@ async function openRecord(record) {
 }
 
 function resetWorkspace() {
+  directoryEpoch += 1
+  directoryCache.clear()
+  directoryRecords.value = []
+  directoryFailures.value = []
+  directoryLoaded.value = false
+  directoryLoading.value = false
+  directoryError.value = ''
+  directoryProgress.value = 0
+  workspaceReady.value = false
   records.value = []
   result.value = null
   recordId.value = null
@@ -132,17 +233,21 @@ function resetWorkspace() {
   loading.value = false
   recordsLoading.value = false
   panelBusy.value = false
-  section.value = 'workspace'
+  section.value = currentUser.value ? sectionFromHash(window.location.hash, canViewAdmin.value) : 'workspace'
 }
 
 async function initializeWorkspace() {
   const version = sessionVersion.value
   const userId = currentUser.value?.id
-  await refreshRecords()
+  const refreshed = await refreshRecords()
   if (!isCurrent(version)) return
   let lastId
-  try { lastId = Number(localStorage.getItem(`keyoushu.lastRecordId.${userId}`)) } catch { return }
+  try { lastId = Number(localStorage.getItem(`keyoushu.lastRecordId.${userId}`)) } catch { /* 存储不可用时仍加载目录。 */ }
   if (Number.isInteger(lastId) && lastId > 0) await openRecord({ id: lastId })
+  if (!isCurrent(version)) return
+  workspaceReady.value = true
+  if (!refreshed) directoryError.value = historyError.value
+  else if (directoryComponent.value) await loadDirectory()
 }
 
 watch(sessionVersion, () => {
@@ -208,8 +313,8 @@ restoreLogin()
     <aside class="sidebar">
       <div class="brand"><span class="brand-mark"><AppIcon name="workspace" :size="23" /></span><div><strong>客有数<span class="brand-dot">.</span></strong><span class="brand-subtitle">客户需求与跟进助手</span></div></div>
       <div class="sidebar-label">工作空间</div>
-      <button type="button" class="current-nav" @click="section = 'workspace'"><AppIcon name="workspace" :size="17" /><span>需求工作台</span><span class="nav-dot"></span></button>
-      <button v-if="canViewAdmin" type="button" class="current-nav" @click="section = 'admin'">网站后台统计</button>
+      <button type="button" class="current-nav" :disabled="loading || panelBusy" :aria-current="section === 'workspace' ? 'page' : undefined" @click="navigate('workspace')"><AppIcon name="workspace" :size="17" /><span>需求工作台</span><span v-if="section === 'workspace'" class="nav-dot"></span></button>
+      <button v-if="canViewAdmin" type="button" class="current-nav" :disabled="loading || panelBusy" @click="navigate('admin')">网站后台统计</button>
       <RecordList
         v-if="section === 'workspace'"
         :records="records"
@@ -219,12 +324,16 @@ restoreLogin()
         @select="openRecord"
         @refresh="refreshRecords"
       />
+      <SidebarDirectories :section="section" :counts="directoryCounts" :disabled="loading || panelBusy" @navigate="navigate" />
       <div class="sidebar-footer"><AppIcon name="shield" :size="18" /><div>本地分析 · 安心留存<span>聊天资料保存在这台电脑</span></div></div>
     </aside>
     <main class="main">
-      <header class="topbar"><span>工作空间 <span class="breadcrumb-divider">/</span> <strong>{{ section === 'admin' ? '网站后台统计' : '需求工作台' }}</strong></span><div class="session-tools"><span>{{ currentUser.username }}</span><button v-if="canViewAdmin" type="button" @click="section = section === 'admin' ? 'workspace' : 'admin'">{{ section === 'admin' ? '返回工作台' : '后台统计' }}</button><button type="button" :disabled="loggingOut" @click="handleLogout">{{ loggingOut ? '退出中…' : '退出登录' }}</button></div></header>
+      <header class="topbar"><span>工作空间 <span class="breadcrumb-divider">/</span> <strong>{{ sectionTitle }}</strong></span><div class="session-tools"><span>{{ currentUser.username }}</span><button v-if="canViewAdmin" type="button" :disabled="loading || panelBusy" @click="navigate(section === 'admin' ? 'workspace' : 'admin')">{{ section === 'admin' ? '返回工作台' : '后台统计' }}</button><button type="button" :disabled="loggingOut" @click="handleLogout">{{ loggingOut ? '退出中…' : '退出登录' }}</button></div></header>
       <div v-if="section === 'admin' && canViewAdmin" class="workspace"><AdminPanel /></div>
-      <div v-else class="workspace">
+      <div v-if="directoryComponent" class="workspace">
+        <component :is="directoryComponent" :items="recordViews[section]" :loading="directoryLoading || recordsLoading || !workspaceReady" :error="directoryError" :failures="directoryFailures" :progress="directoryProgress" :total="records.length" :disabled="loading || panelBusy" @select="openDirectoryRecord" @refresh="refreshDirectory" />
+      </div>
+      <div v-show="section === 'workspace'" class="workspace">
       <header class="page-header"><div><div class="eyebrow">CUSTOMER WORKSPACE</div><h1>让每一次沟通，都有清晰的下一步。</h1><p>从客户聊天中梳理需求、识别待确认事项，轻松推进订单跟进。</p></div><span class="workspace-label"><AppIcon name="shield" :size="16" />本机处理</span></header>
       <ChatInput :loading="loading || panelBusy" @submit="handleAnalyze" />
       <p v-if="error" class="error" role="alert">{{ error }}</p>
