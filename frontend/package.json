@@ -10,7 +10,8 @@
     "test": "node --test tests/calendarDates.test.mjs tests/recordViews.test.mjs",
     "test:browser:calendar": "node tests/calendar.browser.mjs",
     "test:browser:sidebar": "node tests/sidebar.browser.mjs",
-    "test:browser": "npm run test:browser:calendar && npm run test:browser:sidebar"
+    "test:browser:entrance": "node tests/entrance.browser.mjs",
+    "test:browser": "npm run test:browser:calendar && npm run test:browser:sidebar && npm run test:browser:entrance"
   },
   "dependencies": {
     "vue": "^3.5.0"

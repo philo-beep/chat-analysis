@@ -102,6 +102,7 @@ try {
   const nav = (label) => page.getByRole('navigation', { name: '内容目录' }).getByRole('button', { name: new RegExp(label) })
   const content = page.locator('.record-content')
   const login = async (username = 'directory_tester') => {
+    await page.getByRole('button', { name: '点击解锁助手', exact: true }).click()
     await page.locator('#auth-username').fill(username)
     await page.locator('#auth-password').fill('Directory-test-2026')
     await page.getByRole('button', { name: '登录', exact: true }).click()

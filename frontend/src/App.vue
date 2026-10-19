@@ -475,7 +475,7 @@ restoreLogin()
 </script>
 
 <template>
-  <p v-if="!authReady" role="status">正在验证登录状态…</p>
+  <div v-if="!authReady" class="session-loading" role="status"><AppIcon name="leaf" :size="32" /><p>正在开启你的工作空间…</p></div>
   <template v-else-if="!currentUser">
     <LoginPanel :notice="notice" @authenticated="handleAuthenticated" />
     <button v-if="restoreFailed" class="restore-button" type="button" :disabled="authChecking" @click="restoreLogin">{{ authChecking ? '正在重试…' : '重试恢复登录' }}</button>
@@ -513,10 +513,10 @@ restoreLogin()
         <component :is="directoryComponent" :items="activeViews[section]" :allow-import="section === 'tasks' && canWrite" @import="addSuggestionToCalendar" :loading="!workspaceReady || (directoryRecordId ? scopedLoading : directoryLoading || recordsLoading)" :error="directoryRecordId ? scopedError : directoryError" :failures="directoryRecordId ? [] : directoryFailures" :progress="directoryRecordId ? (scopedRecord ? 1 : 0) : directoryProgress" :total="directoryRecordId ? 1 : records.length" :scoped-record-id="directoryRecordId" :scope-label="directoryRecordId ? `范围：当前聊天 · ${shortcutRecordTitle} · #${directoryRecordId}` : ''" :disabled="loading || panelBusy" @select="openDirectoryRecord" @refresh="refreshDirectory" />
       </div>
       <div v-show="section === 'workspace'" class="workspace">
-      <header class="page-header"><div><div class="eyebrow">A LITTLE CLARITY. A BETTER DAY.</div><h1>今天，也让生意简单一点。</h1><p>从客户聊天中梳理需求，让每一次沟通都有清晰的下一步。</p></div><span class="workspace-label"><AppIcon name="shield" :size="16" />先核对，再使用</span></header>
+      <header class="page-header"><div><div class="eyebrow">YOUR SALES COPILOT</div><h1>把每次沟通，推进一步。</h1><p>客户需求、关键问题与下一步行动，在一个工作台里有序衔接。</p></div><span class="workspace-label"><AppIcon name="shield" :size="16" />先核对，再使用</span></header>
       <section v-if="!result" class="hero" aria-label="需求工作台介绍">
-        <div class="hero-copy"><span class="hero-tag"><i></i>给忙碌的生意，一个得力助手</span><h2>客户随口一说，<br />我们帮你理出<span>下一步。</span></h2><p>不必反复翻聊天，不用从头填表。<br />把沟通交给客有数，把时间留给客户。</p><button class="hero-action" type="button" :disabled="loading || panelBusy" @click="focusChatInput">开始整理<AppIcon name="arrow" :size="17" /></button></div>
-        <div class="hero-art" aria-hidden="true"><div class="art-orbit"></div><span class="art-spark">✳</span><div class="art-chat"><span class="art-caption">一段客户聊天 · 示意</span><p>“想做一批团建文化衫，<br />大概100件，时间还没定…”</p><span class="chat-dots">· · ·</span></div><div class="art-brief"><div class="art-brief-title"><span><AppIcon name="file" :size="16" />需求小卡片 · 示意</span><AppIcon name="check" :size="16" /></div><div class="brief-row"><span>产品</span><strong>团建文化衫</strong></div><div class="brief-row"><span>数量</span><strong>约 100 件</strong></div><div class="brief-row"><span>交付时间</span><em>待确认</em></div><div class="brief-foot">从模糊的对话，到清晰的行动</div></div><span class="art-note">让每一句话，都有着落。</span></div>
+        <div class="hero-copy"><span class="hero-tag"><i></i>客有数 · 智能销售助手</span><h2>专注客户与生意，<br />让助手理清<span>下一步。</span></h2><p>从一段对话，到一份清晰的跟进计划。<br />提炼需求、梳理疑问、安排日程，把时间还给你。</p><button class="hero-action" type="button" :disabled="loading || panelBusy" @click="focusChatInput">开始整理<AppIcon name="arrow" :size="17" /></button></div>
+        <div class="hero-art" aria-hidden="true"><div class="art-orbit"></div><span class="art-spark"><AppIcon name="spark" :size="35" /></span><div class="art-chat"><span class="art-caption">一段客户聊天 · 示意</span><p>“想做一批团建文化衫，<br />大概100件，时间还没定…”</p><span class="chat-dots">· · ·</span></div><div class="art-brief"><div class="art-brief-title"><span><AppIcon name="file" :size="16" />需求小卡片 · 示意</span><AppIcon name="check" :size="16" /></div><div class="brief-row"><span>产品</span><strong>团建文化衫</strong></div><div class="brief-row"><span>数量</span><strong>约 100 件</strong></div><div class="brief-row"><span>交付时间</span><em>待确认</em></div><div class="brief-foot">从模糊的对话，到清晰的行动</div></div><span class="art-note"><i></i>客户沟通 <span>→</span> 需求洞察 <span>→</span> 跟进行动</span></div>
       </section>
       <div v-if="!result" class="step-grid" aria-label="操作流程"><div class="step-card"><span class="step-symbol"><AppIcon name="message" :size="20" /></span><div><h3>放入客户沟通</h3><p>粘贴文字或上传聊天截图</p></div><span class="step-index">01</span></div><div class="step-card"><span class="step-symbol"><AppIcon name="file" :size="20" /></span><div><h3>核对需求与问题</h3><p>查看原文依据，补齐待确认事项</p></div><span class="step-index">02</span></div><div class="step-card"><span class="step-symbol"><AppIcon name="calendar" :size="20" /></span><div><h3>安排下一步行动</h3><p>把建议待办同步到日程计划</p></div><span class="step-index">03</span></div></div>
       <div class="work-grid"><div ref="inputArea" class="work-main">
@@ -567,4 +567,44 @@ restoreLogin()
 @media(max-width:1050px) { .work-grid { grid-template-columns:minmax(0,1fr); }.work-aside { grid-template-columns:1fr 1fr; }.workspace-label { display:none; }.hero h2 { font-size:27px; }.art-chat { width:185px; }.art-brief { width:190px; right:-8px; }.art-note { display:none; }.hero { padding:24px; }.hero-tag { font-size:10px; }.step-card { align-items:flex-start; }.step-symbol { width:29px; height:29px; }.topbar { flex-wrap:wrap; } }
 @media(max-width:760px) { .layout { display:block; }.sidebar { position:static; height:auto; max-height:none; padding:20px 16px 16px; border-right:0; border-bottom:1px solid var(--line); }.brand { padding:0 4px 18px; }.brand strong { font-size:23px; }.sidebar-label,.sidebar-footer { display:none; }.current-nav { min-height:38px; margin-bottom:5px; padding:9px 12px; }.topbar { padding:12px 16px; gap:10px; }.session-tools { flex-wrap:wrap; }.session-tools button { min-height:34px; }.workspace { padding:24px 16px 18px; }.page-header h1 { font-size:23px; }.page-header .eyebrow { font-size:10px; }.hero { grid-template-columns:1fr 1fr; }.hero h2 { font-size:28px; }.hero-art { min-height:280px; }.art-chat { width:200px; top:25px; }.art-brief { width:200px; top:130px; right:0; }.step-card { flex-direction:column; }.step-card p { font-size:11px; }.workspace-footer { flex-wrap:wrap; } }
 @media(max-width:520px) { .hero { grid-template-columns:minmax(0,1fr); padding:25px; }.hero h2 { font-size:30px; }.hero-art { min-height:255px; margin-top:10px; }.art-chat { top:12px; left:4px; width:195px; }.art-brief { top:112px; right:0; width:190px; }.art-orbit { width:190px; height:190px; right:10px; }.art-spark { font-size:38px; right:0; }.hero-copy p br { display:none; }.work-aside { grid-template-columns:minmax(0,1fr); }.guide-card h3 br,.schedule-card h3 br { display:none; }.step-grid { gap:7px; }.step-card { padding:12px 9px; }.step-card h3 { line-height:1.6; font-size:12px; }.step-card p { font-size:11px; }.user-name { max-width:95px; }.session-tools { gap:7px; }.workspace-footer { flex-direction:column; gap:3px; } }
+
+/* 商务工作台：与欢迎/登录的品牌色连续，入场动画结束后保持静止。 */
+.session-loading { min-height:100svh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; color:#cddfcf; background:#102e2b; font-size:14px; }
+.layout { background:#f7f9f5; }
+.sidebar { background:#edf2eb; border-right-color:#dce5db; }
+.brand-mark { background:#204638; color:#e3dfb6; border-radius:12px; }
+.topbar { background:#ffffffd9; border-bottom-color:#e0e8de; }
+.current-nav[aria-current=page] { background:#dce9dd; color:#204638; }
+.page-header { padding-bottom:6px; }
+.page-header .eyebrow { color:#628472; letter-spacing:2px; }
+.page-header h1 { font-weight:600; }
+.workspace-label { padding:8px 12px; border:1px solid #dce5d8; border-radius:24px; background:#fff; color:#557360; }
+.hero { background:#183f37; border:1px solid #244c40; border-radius:18px; padding:34px 36px; }
+.hero::before { content:''; position:absolute; inset:0; pointer-events:none; background:radial-gradient(ellipse at 70% 90%,#83a87720,transparent 65%),linear-gradient(115deg,#31553c40,transparent 60%); }
+.hero-tag { background:#ffffff08; border-color:#a4c6a12e; color:#c0d3be; }
+.hero-tag i { background:#d6dab0; }
+.hero h2 { color:#f0f3e8; font-size:clamp(26px,2.45vw,36px); }
+.hero h2 span { color:#e3dfb6; }
+.hero h2 span:after { background:#9ba77c60; height:6px; }
+.hero-copy p { color:#b7cdbf; }
+.hero-action { color:#183f37; background:#e3dfb6; border-color:#eee8c5; font-weight:600; padding:11px 18px; }
+.hero-action:hover:not(:disabled) { color:#183f37; background:#f0ebcb; border-color:#eee8c5; }
+.art-orbit { border-color:#b3d1a32e; box-shadow:0 0 0 32px #aacda008,0 0 0 64px #aacda005; }
+.art-spark { color:#e2dab0; top:6px; right:3%; }
+.art-chat { background:#fbfcf7; transform:rotate(-3deg); animation:conversation-arrive .7s ease-out both; }
+.art-brief { background:#fffef7; transform:rotate(2deg); animation:brief-arrive .85s .15s ease-out both; }
+.art-note { display:flex; align-items:center; gap:8px; color:#b6c9b3; bottom:-10px; font-size:10px; }
+.art-note i { width:5px; height:5px; border-radius:50%; background:#dcd3a2; }
+.art-note span { color:#809c86; }
+.step-card { background:#fff; border-color:#e1e8dc; border-radius:12px; }
+.step-symbol { background:#eaf2e8; color:#47735a; }
+.guide-card { background:#edf3e9; border-color:#dde7d9; }
+.schedule-card { background:#eee7c5; }
+@keyframes conversation-arrive { from { opacity:0; transform:translateY(18px) rotate(-3deg); } to { opacity:1; transform:translateY(0) rotate(-3deg); } }
+@keyframes brief-arrive { from { opacity:0; transform:translateY(18px) rotate(2deg); } to { opacity:1; transform:translateY(0) rotate(2deg); } }
+@media(max-width:1200px) { .hero { padding:28px; } }
+@media(max-width:1050px) { .art-note { display:none; } }
+@media(max-width:520px) { .hero { padding:25px; }.hero h2 { font-size:29px; } }
+@media(prefers-reduced-motion:reduce) { .art-chat,.art-brief { animation:none; } }
+
 </style>
