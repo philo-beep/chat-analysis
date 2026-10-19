@@ -1,6 +1,6 @@
 <!-- 页面总入口，A 负责 -->
 <script setup>
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import ChatInput from './components/ChatInput.vue'
 import RecordList from './components/RecordList.vue'
 import ResultPanel from './components/ResultPanel.vue'
@@ -17,6 +17,13 @@ import { buildRecordViews, loadRecordDetails } from './recordViews.js'
 import { analyze, getRecord, listRecords, deleteRecord, getCurrentUser, logout, trackPageView, importCalendarTask } from './api.js'
 import { currentUser, sessionVersion, getAuthToken, establishSession, restoreSessionUser, clearSession } from './auth.js'
 
+const inputArea = ref(null)
+async function focusChatInput() {
+  await nextTick()
+  const input = inputArea.value?.querySelector('textarea')
+  input?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'center' })
+  input?.focus({ preventScroll: true })
+}
 const records = ref([])
 const calendarPanel = ref(null)
 const result = ref(null)
@@ -475,10 +482,10 @@ restoreLogin()
   </template>
   <div v-else :key="sessionVersion" class="layout">
     <aside class="sidebar">
-      <div class="brand"><span class="brand-mark"><AppIcon name="workspace" :size="23" /></span><div><strong>客有数<span class="brand-dot">.</span></strong><span class="brand-subtitle">客户需求与跟进助手</span></div></div>
+      <div class="brand"><span class="brand-mark"><AppIcon name="leaf" :size="25" /></span><div><strong>客有数<span class="brand-dot">.</span></strong><span class="brand-subtitle">让好生意，自然发生</span></div></div>
       <div class="sidebar-label">工作空间</div>
       <button type="button" class="current-nav" :disabled="loading || panelBusy" :aria-current="section === 'workspace' ? 'page' : undefined" @click="navigate('workspace')"><AppIcon name="workspace" :size="17" /><span>需求工作台</span><span v-if="section === 'workspace'" class="nav-dot"></span></button>
-      <button v-if="canViewAdmin" type="button" class="current-nav" :disabled="loading || panelBusy" @click="navigate('admin')">网站后台统计</button>
+      <button v-if="canViewAdmin" type="button" class="current-nav" :aria-current="section === 'admin' ? 'page' : undefined" :disabled="loading || panelBusy" @click="navigate('admin')"><AppIcon name="shield" :size="17" />网站后台统计</button>
       <RecordList
         v-if="section !== 'admin'"
         :records="records"
@@ -494,10 +501,10 @@ restoreLogin()
         @refresh="refreshRecords"
       />
       <SidebarDirectories :section="section" :counts="directoryCounts" :disabled="loading || panelBusy" :record-id="shortcutRecordId" :record-title="shortcutRecordTitle" :scope="scopeMode" @navigate="navigateDirectory" @scope="changeScope" />
-      <div class="sidebar-footer"><AppIcon name="shield" :size="18" /><div>本地分析 · 安心留存<span>聊天资料保存在这台电脑</span></div></div>
+      <div class="sidebar-footer"><AppIcon name="shield" :size="18" /><div>云端分析 · 本机留存<span>聊天资料保存在这台电脑</span></div></div>
     </aside>
     <main class="main">
-      <header class="topbar"><span>工作空间 <span class="breadcrumb-divider">/</span> <strong>{{ sectionTitle }}</strong></span><div class="session-tools"><span>{{ currentUser.username }}</span><button v-if="canViewAdmin" type="button" :disabled="loading || panelBusy" @click="navigate(section === 'admin' ? 'workspace' : 'admin')">{{ section === 'admin' ? '返回工作台' : '后台统计' }}</button><button type="button" :disabled="loggingOut" @click="handleLogout">{{ loggingOut ? '退出中…' : '退出登录' }}</button></div></header>
+      <header class="topbar"><span>工作空间 <span class="breadcrumb-divider">/</span> <strong>{{ sectionTitle }}</strong></span><div class="session-tools"><span class="user-name">{{ currentUser.username }}</span><span class="avatar" aria-hidden="true">{{ currentUser.username.slice(0, 1) }}</span><button v-if="canViewAdmin" type="button" :disabled="loading || panelBusy" @click="navigate(section === 'admin' ? 'workspace' : 'admin')">{{ section === 'admin' ? '返回工作台' : '后台统计' }}</button><button type="button" :disabled="loggingOut" @click="handleLogout">{{ loggingOut ? '退出中…' : '退出登录' }}</button></div></header>
       <div v-if="section === 'admin' && canViewAdmin" class="workspace"><AdminPanel /></div>
       <div v-if="isCalendar" class="workspace"><CalendarPanel ref="calendarPanel" :key="sessionVersion" :view="section === 'calendar/gantt' ? 'gantt' : 'calendar'" :disabled="!canWrite" @navigate="navigate" @busy="handlePanelBusy" /></div>
       <div v-if="directoryComponent" class="workspace">
@@ -506,7 +513,13 @@ restoreLogin()
         <component :is="directoryComponent" :items="activeViews[section]" :allow-import="section === 'tasks' && canWrite" @import="addSuggestionToCalendar" :loading="!workspaceReady || (directoryRecordId ? scopedLoading : directoryLoading || recordsLoading)" :error="directoryRecordId ? scopedError : directoryError" :failures="directoryRecordId ? [] : directoryFailures" :progress="directoryRecordId ? (scopedRecord ? 1 : 0) : directoryProgress" :total="directoryRecordId ? 1 : records.length" :scoped-record-id="directoryRecordId" :scope-label="directoryRecordId ? `范围：当前聊天 · ${shortcutRecordTitle} · #${directoryRecordId}` : ''" :disabled="loading || panelBusy" @select="openDirectoryRecord" @refresh="refreshDirectory" />
       </div>
       <div v-show="section === 'workspace'" class="workspace">
-      <header class="page-header"><div><div class="eyebrow">CUSTOMER WORKSPACE</div><h1>让每一次沟通，都有清晰的下一步。</h1><p>从客户聊天中梳理需求、识别待确认事项，轻松推进订单跟进。</p></div><span class="workspace-label"><AppIcon name="shield" :size="16" />本机处理</span></header>
+      <header class="page-header"><div><div class="eyebrow">A LITTLE CLARITY. A BETTER DAY.</div><h1>今天，也让生意简单一点。</h1><p>从客户聊天中梳理需求，让每一次沟通都有清晰的下一步。</p></div><span class="workspace-label"><AppIcon name="shield" :size="16" />先核对，再使用</span></header>
+      <section v-if="!result" class="hero" aria-label="需求工作台介绍">
+        <div class="hero-copy"><span class="hero-tag"><i></i>给忙碌的生意，一个得力助手</span><h2>客户随口一说，<br />我们帮你理出<span>下一步。</span></h2><p>不必反复翻聊天，不用从头填表。<br />把沟通交给客有数，把时间留给客户。</p><button class="hero-action" type="button" :disabled="loading || panelBusy" @click="focusChatInput">开始整理<AppIcon name="arrow" :size="17" /></button></div>
+        <div class="hero-art" aria-hidden="true"><div class="art-orbit"></div><span class="art-spark">✳</span><div class="art-chat"><span class="art-caption">一段客户聊天 · 示意</span><p>“想做一批团建文化衫，<br />大概100件，时间还没定…”</p><span class="chat-dots">· · ·</span></div><div class="art-brief"><div class="art-brief-title"><span><AppIcon name="file" :size="16" />需求小卡片 · 示意</span><AppIcon name="check" :size="16" /></div><div class="brief-row"><span>产品</span><strong>团建文化衫</strong></div><div class="brief-row"><span>数量</span><strong>约 100 件</strong></div><div class="brief-row"><span>交付时间</span><em>待确认</em></div><div class="brief-foot">从模糊的对话，到清晰的行动</div></div><span class="art-note">让每一句话，都有着落。</span></div>
+      </section>
+      <div v-if="!result" class="step-grid" aria-label="操作流程"><div class="step-card"><span class="step-symbol"><AppIcon name="message" :size="20" /></span><div><h3>放入客户沟通</h3><p>粘贴文字或上传聊天截图</p></div><span class="step-index">01</span></div><div class="step-card"><span class="step-symbol"><AppIcon name="file" :size="20" /></span><div><h3>核对需求与问题</h3><p>查看原文依据，补齐待确认事项</p></div><span class="step-index">02</span></div><div class="step-card"><span class="step-symbol"><AppIcon name="calendar" :size="20" /></span><div><h3>安排下一步行动</h3><p>把建议待办同步到日程计划</p></div><span class="step-index">03</span></div></div>
+      <div class="work-grid"><div ref="inputArea" class="work-main">
       <ChatInput :loading="loading || panelBusy" @submit="handleAnalyze" />
       <p v-if="error" class="error" role="alert">{{ error }}</p>
       <ResultPanel
@@ -520,56 +533,38 @@ restoreLogin()
         @saved="handleSaved"
         @busy="handlePanelBusy"
       />
+      </div><aside class="work-aside" aria-label="跟进建议"><section class="guide-card"><div class="aside-heading"><AppIcon name="leaf" :size="18" />少一点忙乱，多一点笃定</div><h3>好的跟进，<br />从问对问题开始。</h3><p>客户没说清楚的，不用猜。<br />先确认这三件小事：</p><ul><li><span>01</span><div><strong>要多少？</strong><small>数量、规格和使用场景</small></div></li><li><span>02</span><div><strong>预算是多少？</strong><small>单件预算还是总预算</small></div></li><li><span>03</span><div><strong>什么时候需要？</strong><small>具体收货日期和地点</small></div></li></ul><div class="guide-foot"><AppIcon name="shield" :size="15" />没确认的价格、交期，不作承诺</div></section><section class="schedule-card"><span class="pill">让行动有着落</span><AppIcon class="schedule-art" name="calendar" :size="74" /><h3>整理好需求，<br />也安排好下一步。</h3><p>有截止日的任务放进日历，尚未排期的事项留在待办池。</p><button type="button" :disabled="loading || panelBusy" @click="navigate('calendar')">查看日程计划<AppIcon name="arrow" :size="16" /></button></section></aside></div>
       <footer class="workspace-footer"><span>客有数 · 把沟通变成行动</span><span>分析结果可编辑，请核对原文后使用</span></footer>
       </div>
     </main>
   </div>
 </template>
 
+
 <style scoped>
-.session-tools { display: flex; align-items: center; gap: 10px; }
-.session-tools button { padding: 6px 10px; font-size: 12px; }
-.restore-button { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); }
-.layout {
-  display: grid;
-  grid-template-columns: 252px minmax(0, 1fr);
-  min-height: 100vh;
-}
-.sidebar {
-  background: #14223b;
-  color: #c7d1e2;
-  padding: 30px 18px 20px;
-  display: flex;
-  flex-direction: column;
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  min-width: 0;
-}
-.main {
-  min-width: 0;
-}
-.brand { display: flex; align-items: center; gap: 11px; padding: 0 10px 34px; }
-.brand-mark { width: 43px; height: 43px; background: #3159cb; color: white; border-radius: 12px; display: grid; place-items: center; }
-.brand strong { color: white; font-size: 24px; letter-spacing: 1px; }
-.brand-dot { color: #83a8ff; }
-.brand-subtitle { display: block; font-size: 10px; letter-spacing: 1.4px; margin-top: 3px; color: #8c9cb6; }
-.sidebar-label { font-size: 11px; color: #7386a5; margin: 0 12px 12px; letter-spacing: 1px; }
-.current-nav { display: flex; align-items: center; gap: 10px; padding: 13px 14px; border: 1px solid #4d6da83b; background: #28436a70; color: #e7eeff; border-radius: 8px; font-size: 13px; margin-bottom: 30px; }
-.nav-dot { width: 5px; height: 5px; background: #86a9ff; border-radius: 50%; margin-left: auto; }
-.sidebar-footer { display: flex; gap: 10px; align-items: center; margin-top: auto; padding: 20px 9px 0; border-top: 1px solid #ffffff12; font-size: 12px; color: #adbad0; }
-.sidebar-footer span { display: block; font-size: 10px; color: #7185a4; margin-top: 5px; }
-.topbar { height: 66px; padding: 0 38px; border-bottom: 1px solid var(--line); background: #ffffffc9; display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: #8994a7; gap: 10px; }
-.topbar strong { color: #48566e; font-weight: 500; }
-.breadcrumb-divider { margin: 0 13px; color: #c7cfdd; }
-.local-badge { display: flex; align-items: center; gap: 7px; font-size: 11px; white-space: nowrap; }
-.local-badge i { width: 6px; height: 6px; background: #62a68d; border-radius: 50%; }
-.workspace { max-width: 1240px; margin: auto; padding: 34px 38px 20px; }
-.page-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 26px; }
-.page-header h1 { font-size: clamp(21px, 2vw, 27px); letter-spacing: -.5px; color: var(--ink); line-height: 1.5; margin: 9px 0 8px; font-weight: 650; }
-.page-header p { font-size: 13px; line-height: 1.8; color: var(--muted); margin-bottom: 0; }
-.workspace-label { display: flex; align-items: center; gap: 7px; color: #65758f; font-size: 11px; flex-shrink: 0; }
-.workspace-footer { display: flex; justify-content: space-between; gap: 12px; padding: 22px 3px 0; color: #97a2b3; font-size: 10px; line-height: 1.8; }
-@media (max-width: 1100px) { .layout { grid-template-columns: 218px minmax(0, 1fr); } .workspace { padding: 28px 24px 18px; } .topbar { padding: 0 24px; } .workspace-label { display: none; } }
-@media (max-width: 760px) { .layout { display: block; } .sidebar { position: static; height: auto; padding: 19px 20px; } .brand { padding: 0; } .brand-mark { width: 36px; height: 36px; border-radius: 9px; } .brand strong { font-size: 21px; } .brand-subtitle { font-size: 9px; } .sidebar-label, .current-nav, .sidebar-footer { display: none; } .topbar { height: 50px; padding: 0 20px; } .workspace { padding: 25px 16px 16px; } .page-header { margin-bottom: 22px; } .page-header h1 { font-size: 22px; max-width: 290px; } .workspace-footer { flex-direction: column; gap: 2px; } }
+.layout { display:grid; grid-template-columns:260px minmax(0,1fr); min-height:100vh; }
+.sidebar { background:#f3f3ec; border-right:1px solid var(--line); padding:28px 18px 20px; display:flex; flex-direction:column; position:sticky; top:0; height:100vh; min-width:0; overflow-y:auto; scrollbar-width:thin; }
+.brand { display:flex; align-items:center; gap:11px; padding:0 10px 28px; }
+.brand-mark { width:42px; height:44px; background:var(--brand); color:#f3e5af; border-radius:13px 13px 13px 3px; display:grid; place-items:center; }
+.brand strong { color:var(--ink); font-size:25px; letter-spacing:1px; }
+.brand-dot { color:#84916a; }.brand-subtitle { display:block; font-size:11px; margin-top:4px; color:#7c846f; }
+.sidebar-label { font-size:11px; color:#7d856f; margin:0 12px 10px; letter-spacing:1px; }
+.current-nav { justify-content:flex-start; flex-shrink:0; width:100%; padding:12px; border:1px solid transparent; background:transparent; color:#6b765f; border-radius:9px; font-size:13px; margin-bottom:8px; }
+.current-nav[aria-current=page] { background:#e3e8d9; color:#3d5035; font-weight:650; border-color:#dce3ce; }
+.nav-dot { width:6px; height:6px; background:#728356; border-radius:50%; margin-left:auto; }
+.sidebar-footer { display:flex; gap:10px; align-items:center; margin-top:auto; padding:22px 9px 0; border-top:1px solid var(--line); font-size:12px; color:#647258; }.sidebar-footer span { display:block; font-size:11px; color:#838d77; margin-top:5px; }
+.main { min-width:0; }.topbar { min-height:70px; padding:12px 34px; border-bottom:1px solid var(--line); background:#fdfdf8; display:flex; align-items:center; justify-content:space-between; font-size:12px; color:#7e8773; gap:12px; }.topbar strong { color:#56644b; font-weight:500; }.breadcrumb-divider { margin:0 10px; color:#b9c0ac; }
+.session-tools { display:flex; align-items:center; gap:9px; min-width:0; }.session-tools button { padding:6px 10px; font-size:12px; }.user-name { max-width:150px; overflow:hidden; text-overflow:ellipsis; }.avatar { display:grid; place-items:center; width:32px; height:32px; flex-shrink:0; background:#e9ecdd; border:2px solid white; border-radius:50%; color:#61714c; }
+.restore-button { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); }
+.workspace { max-width:1480px; margin:auto; padding:30px 34px 22px; }.page-header { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:24px; }.page-header h1 { font-size:clamp(23px,2.2vw,30px); font-weight:650; line-height:1.5; margin:8px 0; color:var(--ink); }.page-header p { color:var(--muted); font-size:13px; line-height:1.8; margin-bottom:0; }.workspace-label { display:flex; align-items:center; gap:7px; font-size:12px; color:#748165; white-space:nowrap; }
+.hero { min-height:318px; border-radius:18px; background:#e9eddf; display:grid; grid-template-columns:1fr 1fr; padding:30px 36px; overflow:hidden; position:relative; }.hero-copy { position:relative; z-index:1; }.hero-tag { display:inline-flex; align-items:center; gap:7px; padding:6px 10px; border-radius:30px; font-size:11px; background:#f7f9edb0; color:#627450; border:1px solid #ffffff90; }.hero-tag i { width:5px; height:5px; border-radius:50%; background:#7d8e65; }.hero h2 { font-size:clamp(27px,2.65vw,39px); font-weight:650; color:#34432a; line-height:1.5; margin:14px 0 10px; }.hero h2 span { position:relative; white-space:nowrap; z-index:1; }.hero h2 span:after { content:''; position:absolute; height:9px; bottom:3px; left:0; right:0; background:#e9d786; z-index:-1; border-radius:40%; }.hero-copy p { color:#6f7d62; font-size:13px; line-height:1.9; margin-bottom:17px; }.hero-action { background:var(--brand); color:white; border-color:var(--brand); }.hero-action:hover:not(:disabled) { background:#435634; color:white; }
+.hero-art { position:relative; min-height:265px; }.art-orbit { width:260px; height:260px; border:1px solid #d5ddc6; border-radius:50%; position:absolute; right:12px; top:14px; box-shadow:0 0 0 32px #dce3cd40,0 0 0 64px #dce3cd20; }.art-spark { position:absolute; top:-7px; right:4%; font-size:52px; color:#9aab7a; transform:rotate(12deg); }.art-chat { position:absolute; top:16px; left:8px; transform:rotate(-5deg); width:240px; border-radius:12px; background:#fcfcf5; padding:16px 19px 6px; box-shadow:0 8px 20px #6f7e5512; border:1px solid white; }.art-caption { font-size:11px; color:#7f8d6c; }.art-chat p { font-size:13px; margin:12px 0 0; color:#576547; line-height:1.8; }.chat-dots { color:#a8ae97; font-size:18px; }.art-brief { position:absolute; width:235px; right:12px; top:116px; background:#fffef7; transform:rotate(4deg); border-radius:11px; padding:15px 17px 0; box-shadow:0 12px 32px #5c69451c; border:1px solid white; }.art-brief-title { display:flex; justify-content:space-between; color:#50613c; font-size:12px; margin-bottom:11px; }.art-brief-title span { display:flex; align-items:center; gap:6px; }.brief-row { display:flex; justify-content:space-between; font-size:12px; margin-bottom:9px; color:#8b937c; }.brief-row strong { color:#5c6a4b; font-weight:500; }.brief-row em { font-style:normal; color:#9b8648; background:#f6efce; padding:2px 6px; border-radius:4px; }.brief-foot { margin:10px -17px 0; padding:10px 12px; background:#f6f7ed; font-size:10px; color:#7e8c69; border-radius:0 0 11px 11px; }.art-note { position:absolute; bottom:-9px; left:10px; font-size:11px; color:#899676; }
+.step-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:13px; margin:18px 0 28px; }.step-card { display:flex; align-items:center; gap:11px; padding:17px 14px; background:#fffef8; border:1px solid var(--line); border-radius:11px; min-width:0; }.step-symbol { display:grid; place-items:center; width:36px; height:36px; flex-shrink:0; border-radius:10px; background:#eef2e4; color:#7b8a66; }.step-card h3 { font-size:13px; font-weight:600; color:#58664a; margin:0 0 5px; }.step-card p { font-size:11px; line-height:1.7; color:#838d76; margin:0; }.step-index { font:italic 22px Georgia,serif; margin-left:auto; color:#d7dccb; }
+.work-grid { display:grid; grid-template-columns:minmax(0,1fr) 250px; gap:24px; align-items:start; }.work-main { min-width:0; }.work-aside { display:grid; gap:18px; }.guide-card { padding:24px; background:#eff2e5; border:1px solid #e3e8d6; border-radius:14px; }.aside-heading { display:flex; gap:8px; align-items:center; font-size:11px; color:#7c8c64; }.guide-card h3 { font-size:23px; font-weight:500; line-height:1.55; color:#526444; margin:19px 0 12px; }.guide-card p { font-size:12px; line-height:1.9; color:#7e8a6e; }.guide-card ul { list-style:none; padding:0; margin:22px 0; }.guide-card li { display:flex; gap:13px; margin-bottom:19px; }.guide-card li > span { color:#a2af8b; font:italic 22px Georgia,serif; }.guide-card strong { color:#60734c; font-weight:500; font-size:13px; }.guide-card small { display:block; font-size:11px; color:#7e8b6c; margin-top:5px; line-height:1.7; }.guide-foot { display:flex; gap:6px; border-top:1px dashed #d6dec7; padding-top:15px; font-size:11px; line-height:1.8; color:#7e8c68; }
+.schedule-card { position:relative; padding:24px; background:#f3e9bb; border-radius:14px; overflow:hidden; }.pill { display:inline-block; background:#faf3d7; color:#8b783e; padding:4px 8px; border-radius:5px; font-size:11px; }.schedule-card h3 { color:#6c653e; font-size:22px; font-weight:500; line-height:1.5; margin:15px 0 10px; position:relative; }.schedule-card p { color:#8a7e53; font-size:12px; line-height:1.9; position:relative; }.schedule-card button { background:#fff9df; border-color:#d5c88e; color:#7d6e3e; position:relative; font-size:12px; }.schedule-art { position:absolute; right:4px; bottom:-10px; color:#e0cf92; transform:rotate(-12deg); pointer-events:none; }
+.workspace-footer { display:flex; justify-content:space-between; gap:12px; padding:20px 0 0; margin-top:28px; border-top:1px solid var(--line); color:#8a947a; font-size:11px; line-height:1.8; }
+@media(max-width:1200px) { .layout { grid-template-columns:236px minmax(0,1fr); }.workspace { padding:26px 24px 20px; }.topbar { padding:12px 24px; }.work-grid { grid-template-columns:minmax(0,1fr) 225px; gap:18px; }.hero { padding:28px; }.art-chat { width:205px; left:-4px; }.art-brief { width:205px; right:0; }.step-index { display:none; }.step-card { padding:14px 11px; gap:8px; }.guide-card,.schedule-card { padding:20px; } }
+@media(max-width:1050px) { .work-grid { grid-template-columns:minmax(0,1fr); }.work-aside { grid-template-columns:1fr 1fr; }.workspace-label { display:none; }.hero h2 { font-size:27px; }.art-chat { width:185px; }.art-brief { width:190px; right:-8px; }.art-note { display:none; }.hero { padding:24px; }.hero-tag { font-size:10px; }.step-card { align-items:flex-start; }.step-symbol { width:29px; height:29px; }.topbar { flex-wrap:wrap; } }
+@media(max-width:760px) { .layout { display:block; }.sidebar { position:static; height:auto; max-height:none; padding:20px 16px 16px; border-right:0; border-bottom:1px solid var(--line); }.brand { padding:0 4px 18px; }.brand strong { font-size:23px; }.sidebar-label,.sidebar-footer { display:none; }.current-nav { min-height:38px; margin-bottom:5px; padding:9px 12px; }.topbar { padding:12px 16px; gap:10px; }.session-tools { flex-wrap:wrap; }.session-tools button { min-height:34px; }.workspace { padding:24px 16px 18px; }.page-header h1 { font-size:23px; }.page-header .eyebrow { font-size:10px; }.hero { grid-template-columns:1fr 1fr; }.hero h2 { font-size:28px; }.hero-art { min-height:280px; }.art-chat { width:200px; top:25px; }.art-brief { width:200px; top:130px; right:0; }.step-card { flex-direction:column; }.step-card p { font-size:11px; }.workspace-footer { flex-wrap:wrap; } }
+@media(max-width:520px) { .hero { grid-template-columns:minmax(0,1fr); padding:25px; }.hero h2 { font-size:30px; }.hero-art { min-height:255px; margin-top:10px; }.art-chat { top:12px; left:4px; width:195px; }.art-brief { top:112px; right:0; width:190px; }.art-orbit { width:190px; height:190px; right:10px; }.art-spark { font-size:38px; right:0; }.hero-copy p br { display:none; }.work-aside { grid-template-columns:minmax(0,1fr); }.guide-card h3 br,.schedule-card h3 br { display:none; }.step-grid { gap:7px; }.step-card { padding:12px 9px; }.step-card h3 { line-height:1.6; font-size:12px; }.step-card p { font-size:11px; }.user-name { max-width:95px; }.session-tools { gap:7px; }.workspace-footer { flex-direction:column; gap:3px; } }
 </style>

@@ -2,38 +2,38 @@
 
 :root {
   font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-  color: #26354d;
-  background: #f3f5f9;
+  color: #46513e;
+  background: #f8f8f2;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  --brand: #3159cb;
-  --ink: #17253d;
-  --muted: #758197;
-  --line: #e5eaf2;
+  --brand: #586b45;
+  --ink: #303c2c;
+  --muted: #7a8371;
+  --line: #e3e6da;
   --radius: 14px;
 }
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; }
 button, input, textarea { font: inherit; }
-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 38px; border: 1px solid #dbe2ed; border-radius: 7px; padding: 8px 14px; background: #fff; color: #43516a; cursor: pointer; font-size: 13px; font-weight: 500; transition: background .15s, border-color .15s, box-shadow .15s; }
-button:hover:not(:disabled) { background: #f3f6fc; border-color: #b9c8e6; }
+button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 38px; border: 1px solid #dce1d3; border-radius: 7px; padding: 8px 14px; background: #fff; color: #58634f; cursor: pointer; font-size: 13px; font-weight: 500; transition: background .15s, border-color .15s, box-shadow .15s; }
+button:hover:not(:disabled) { background: #f2f4eb; border-color: #b2c09f; }
 button:disabled { cursor: not-allowed; opacity: .55; }
-button.primary { background: var(--brand); border-color: var(--brand); color: #fff; box-shadow: 0 3px 7px #3159cb20; }
-button.primary:hover:not(:disabled) { background: #254bb6; border-color: #254bb6; }
+button.primary { background: var(--brand); border-color: var(--brand); color: #fff; box-shadow: 0 3px 7px #586b4520; }
+button.primary:hover:not(:disabled) { background: #435634; border-color: #435634; }
 button.ghost { background: transparent; }
-button:focus-visible, summary:focus-visible, .upload-button:focus-within { outline: 3px solid #8eaff0; outline-offset: 3px; }
-input, textarea { display: block; width: 100%; min-width: 0; border: 1px solid #dce3ed; border-radius: 8px; padding: 11px 13px; background: #fff; color: var(--ink); font-size: 14px; line-height: 1.65; outline: none; transition: border-color .15s, box-shadow .15s; }
-input::placeholder, textarea::placeholder { color: #9aa5b6; }
-input:focus, textarea:focus { border-color: #7293df; box-shadow: 0 0 0 3px #3159cb0c; }
-input:disabled, textarea:disabled { background: #f5f7fb; }
+button:focus-visible, summary:focus-visible, .upload-button:focus-within { outline: 3px solid #98ac7b; outline-offset: 3px; }
+input, textarea { display: block; width: 100%; min-width: 0; border: 1px solid #dce1d3; border-radius: 8px; padding: 11px 13px; background: #fff; color: var(--ink); font-size: 14px; line-height: 1.65; outline: none; transition: border-color .15s, box-shadow .15s; }
+input::placeholder, textarea::placeholder { color: #8b947f; }
+input:focus, textarea:focus { border-color: #849b6b; box-shadow: 0 0 0 3px #586b450c; }
+input:disabled, textarea:disabled { background: #f3f4ed; }
 textarea { resize: vertical; }
 h1, h2, h3, p { margin-top: 0; }
 svg { flex-shrink: 0; }
-.card { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 3px 16px #22345103; }
-.eyebrow { font-size: 10px; font-weight: 700; letter-spacing: 1.7px; color: #8895aa; }
+.card { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 3px 16px #42562a06; }
+.eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 1.7px; color: #7b846d; }
 .section-title { display: flex; align-items: center; gap: 10px; }
-.section-icon { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 10px; color: var(--brand); background: #edf2ff; }
+.section-icon { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 10px; color: var(--brand); background: #edf1e5; }
 .hint { color: var(--muted); font-size: 12px; line-height: 1.7; }
 .error, .input-error { padding: 11px 14px; background: #fff2f1; border: 1px solid #f6d9d5; border-radius: 8px; color: #ae3b35; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
 .success { color: #28755c; background: #eef8f3; border-radius: 7px; padding: 11px 14px; font-size: 13px; }
