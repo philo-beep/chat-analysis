@@ -119,7 +119,7 @@ python -m venv .venv-c
 backend/.venv/Scripts/python.exe -B backend/tests/check_acceptance.py --images --output "$env:TEMP/keyoushu-acceptance.json"
 ```
 
-前端验证在 `frontend` 目录执行 `npm test`、`npm run build`。浏览器验收执行 `npm run test:browser`，两组测试顺序运行，使用临时数据库及端口 18000/15173，不调用云端 AI。Windows 默认使用已安装的 Edge；无 Edge 时先执行 `npx playwright install chromium` 下载测试浏览器。可用 `EDGE_EXECUTABLE` 指定浏览器路径、`PYTHON_EXECUTABLE` 指定后端 Python；不需要本机 Codex 工具目录。
+前端验证在 `frontend` 目录执行 `npm test`、`npm run build`。浏览器验收执行 `npm run test:browser`，三组测试（日历、侧栏、欢迎与登录）顺序运行，使用临时数据库及端口 18000/15173，不调用云端 AI。Windows 默认使用已安装的 Edge；无 Edge 时先执行 `npx playwright install chromium` 下载测试浏览器。可用 `EDGE_EXECUTABLE` 指定浏览器路径、`PYTHON_EXECUTABLE` 指定后端 Python；不需要本机 Codex 工具目录。
 
 输入和合成截图位于 `samples/acceptance-cases.json` 与 `samples/screenshots/`；检查结果与实际转录写入指定 JSON，任一检查失败时退出码为 1。
 
