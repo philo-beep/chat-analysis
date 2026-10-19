@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { buildRecordViews, loadRecordDetails } from '../src/recordViews.js'
-import { hashForSection, sectionFromHash } from '../src/navigation.js'
+import { hashForSection, routeFromHash, sectionFromHash } from '../src/navigation.js'
 
 const summary = (id, updated_at = 'v1') => ({ id, updated_at })
 const detail = (id) => ({ id, result: { tasks: [`任务 ${id}`], questions: [] } })
@@ -70,4 +70,17 @@ test('空记录不发起详情请求；hash 刷新可恢复目录且后台仍受
   assert.equal(sectionFromHash('#/admin'), 'workspace')
   assert.equal(sectionFromHash('#/admin', true), 'admin')
   assert.equal(sectionFromHash('#/unknown'), 'workspace')
+})
+
+test('单份聊天地址保留记录和分类，非法记录编号不得成为有效上下文', () => {
+  for (const section of ['tasks', 'questions', 'screenshots']) {
+    const hash = hashForSection(section, 12)
+    assert.equal(hash, `#/records/12/${section}`)
+    assert.deepEqual(routeFromHash(hash), { section, recordId: 12 })
+    assert.equal(sectionFromHash(hash), section)
+  }
+  for (const hash of ['#/records/0/tasks', '#/records/-1/tasks', '#/records/1.5/tasks', '#/records/9007199254740992/tasks', '#/records/1/admin']) {
+    assert.deepEqual(routeFromHash(hash), { section: 'workspace', recordId: null })
+  }
+  assert.equal(hashForSection('workspace', 12), '#/')
 })

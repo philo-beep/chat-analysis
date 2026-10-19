@@ -11,7 +11,7 @@ import SidebarDirectories from './components/SidebarDirectories.vue'
 import TaskList from './components/TaskList.vue'
 import QuestionList from './components/QuestionList.vue'
 import ScreenshotList from './components/ScreenshotList.vue'
-import { directorySections, hashForSection, sectionFromHash } from './navigation.js'
+import { directorySections, hashForSection, routeFromHash, sectionFromHash } from './navigation.js'
 import { buildRecordViews, loadRecordDetails } from './recordViews.js'
 import { analyze, getRecord, listRecords, getCurrentUser, logout, trackPageView } from './api.js'
 import { currentUser, sessionVersion, getAuthToken, establishSession, restoreSessionUser, clearSession } from './auth.js'
@@ -32,6 +32,12 @@ const notice = ref('')
 const restoreFailed = ref(false)
 const loggingOut = ref(false)
 const section = ref(sectionFromHash(window.location.hash))
+const directoryRecordId = ref(routeFromHash(window.location.hash).recordId)
+const scopeMode = ref(directoryRecordId.value || section.value === 'workspace' ? 'current' : 'all')
+const scopedRecord = ref(null)
+const scopedLoading = ref(false)
+const scopedError = ref('')
+let scopedEpoch = 0
 const canViewAdmin = computed(() => currentUser.value?.permissions?.includes('admin:stats'))
 const sectionTitle = computed(() => directorySections.find((item) => item.key === section.value)?.label || (section.value === 'admin' ? '网站后台统计' : '需求工作台'))
 const directoryComponent = computed(() => ({ tasks: TaskList, questions: QuestionList, screenshots: ScreenshotList })[section.value])
@@ -45,24 +51,98 @@ const workspaceReady = ref(false)
 const directoryCache = new Map()
 let directoryEpoch = 0
 const recordViews = computed(() => buildRecordViews(directoryRecords.value))
-const directoryCounts = computed(() => directoryLoaded.value && !directoryFailures.value.length
-  ? Object.fromEntries(Object.entries(recordViews.value).map(([key, items]) => [key, items.length])) : null)
+const scopedViews = computed(() => buildRecordViews(scopedRecord.value ? [scopedRecord.value] : []))
+const activeViews = computed(() => directoryRecordId.value ? scopedViews.value : recordViews.value)
+const shortcutRecordId = computed(() => directoryRecordId.value || recordId.value)
+const shortcutRecordTitle = computed(() => scopedRecord.value?.title || records.value.find((item) => item.id === shortcutRecordId.value)?.title || (shortcutRecordId.value ? `记录 #${shortcutRecordId.value}` : '尚未选择聊天'))
+const directoryCounts = computed(() => {
+  let views
+  if (scopeMode.value === 'current') {
+    if (directoryRecordId.value) {
+      if (!scopedRecord.value || scopedLoading.value || scopedError.value) return null
+      views = scopedViews.value
+    } else {
+      if (!recordId.value || !result.value) return null
+      views = buildRecordViews([{ id: recordId.value, result: result.value, source_image: sourceImage.value }])
+    }
+  } else {
+    if (!directoryLoaded.value || directoryFailures.value.length) return null
+    views = recordViews.value
+  }
+  return Object.fromEntries(Object.entries(views).map(([key, items]) => [key, items.length]))
+})
 
-function navigate(next) {
+function navigate(next, targetId = null) {
   if (loading.value || panelBusy.value) return
-  section.value = sectionFromHash(hashForSection(next), canViewAdmin.value)
-  if (window.location.hash !== hashForSection(section.value)) window.location.hash = hashForSection(section.value)
+  const route = routeFromHash(hashForSection(next, targetId), canViewAdmin.value)
+  section.value = route.section
+  directoryRecordId.value = route.recordId
+  scopeMode.value = route.recordId || route.section === 'workspace' ? 'current' : 'all'
+  const hash = hashForSection(section.value, directoryRecordId.value)
+  if (window.location.hash !== hash) window.location.hash = hash
+}
+
+function navigateDirectory(next) {
+  if (scopeMode.value === 'current' && !shortcutRecordId.value) return
+  navigate(next, scopeMode.value === 'current' ? shortcutRecordId.value : null)
+}
+
+function changeScope(mode) {
+  if (loading.value || panelBusy.value || (mode === 'current' && !shortcutRecordId.value)) return
+  scopeMode.value = mode
+  if (directoryComponent.value) navigateDirectory(section.value)
+}
+
+function openHistoryShortcut({ id, section: next }) {
+  navigate(next, id)
 }
 
 function syncNavigation() {
   if (loading.value || panelBusy.value) {
-    window.history.replaceState(null, '', hashForSection(section.value))
+    window.history.replaceState(null, '', hashForSection(section.value, directoryRecordId.value))
     return
   }
-  section.value = sectionFromHash(window.location.hash, canViewAdmin.value)
+  const route = routeFromHash(window.location.hash, canViewAdmin.value)
+  section.value = route.section
+  directoryRecordId.value = route.recordId
+  scopeMode.value = route.recordId || route.section === 'workspace' ? 'current' : 'all'
 }
 window.addEventListener('hashchange', syncNavigation)
 onBeforeUnmount(() => window.removeEventListener('hashchange', syncNavigation))
+
+watch(directoryRecordId, () => {
+  scopedEpoch += 1
+  scopedRecord.value = null
+  scopedError.value = ''
+  scopedLoading.value = false
+}, { flush: 'sync' })
+
+async function loadScopedRecord(force = false) {
+  const id = directoryRecordId.value
+  if (!id || !currentUser.value || !workspaceReady.value || scopedLoading.value) return
+  if (!force && scopedRecord.value?.id === id) return
+  const version = sessionVersion.value
+  const epoch = ++scopedEpoch
+  const active = () => isCurrent(version) && epoch === scopedEpoch && directoryRecordId.value === id
+  scopedLoading.value = true
+  scopedError.value = ''
+  try {
+    const cached = !force && directoryCache.get(id)?.record
+    const record = cached || await getRecord(id)
+    if (!active()) return
+    scopedRecord.value = record
+    // 切换到另一份聊天时同步工作台；同一份聊天不重置尚未保存的编辑草稿。
+    if (recordId.value !== id) showRecord(record)
+    directoryCache.set(id, { updatedAt: record.updated_at, record })
+  } catch (e) {
+    if (active()) {
+      scopedRecord.value = null
+      scopedError.value = `无法读取这份聊天 #${id}：${e.message}`
+    }
+  } finally {
+    if (active()) scopedLoading.value = false
+  }
+}
 
 async function loadDirectory() {
   if (!currentUser.value || !workspaceReady.value || recordsLoading.value || directoryLoading.value || directoryLoaded.value) return
@@ -93,6 +173,10 @@ async function loadDirectory() {
 }
 
 async function refreshDirectory() {
+  if (directoryRecordId.value) {
+    if (!loading.value && !panelBusy.value) await loadScopedRecord(true)
+    return
+  }
   if (directoryLoading.value || loading.value || panelBusy.value || recordsLoading.value) return
   const version = sessionVersion.value
   directoryCache.clear()
@@ -108,8 +192,10 @@ async function openDirectoryRecord(record) {
   if (isCurrent(version) && record.id !== recordId.value) await openRecord(record)
 }
 
-watch([section, workspaceReady, recordsLoading], () => {
-  if (directoryComponent.value && workspaceReady.value && !recordsLoading.value) loadDirectory()
+watch([section, directoryRecordId, workspaceReady, recordsLoading], () => {
+  if (!directoryComponent.value || !workspaceReady.value) return
+  if (directoryRecordId.value) loadScopedRecord()
+  else if (!recordsLoading.value) loadDirectory()
 })
 
 function isCurrent(version) {
@@ -214,6 +300,10 @@ async function openRecord(record) {
 }
 
 function resetWorkspace() {
+  scopedEpoch += 1
+  scopedRecord.value = null
+  scopedLoading.value = false
+  scopedError.value = ''
   directoryEpoch += 1
   directoryCache.clear()
   directoryRecords.value = []
@@ -234,6 +324,8 @@ function resetWorkspace() {
   recordsLoading.value = false
   panelBusy.value = false
   section.value = currentUser.value ? sectionFromHash(window.location.hash, canViewAdmin.value) : 'workspace'
+  directoryRecordId.value = currentUser.value ? routeFromHash(window.location.hash, canViewAdmin.value).recordId : null
+  scopeMode.value = directoryRecordId.value || section.value === 'workspace' ? 'current' : 'all'
 }
 
 async function initializeWorkspace() {
@@ -243,10 +335,11 @@ async function initializeWorkspace() {
   if (!isCurrent(version)) return
   let lastId
   try { lastId = Number(localStorage.getItem(`keyoushu.lastRecordId.${userId}`)) } catch { /* 存储不可用时仍加载目录。 */ }
-  if (Number.isInteger(lastId) && lastId > 0) await openRecord({ id: lastId })
+  if (!directoryRecordId.value && Number.isInteger(lastId) && lastId > 0) await openRecord({ id: lastId })
   if (!isCurrent(version)) return
   workspaceReady.value = true
-  if (!refreshed) directoryError.value = historyError.value
+  if (directoryRecordId.value) await loadScopedRecord()
+  else if (!refreshed) directoryError.value = historyError.value
   else if (directoryComponent.value) await loadDirectory()
 }
 
@@ -316,22 +409,24 @@ restoreLogin()
       <button type="button" class="current-nav" :disabled="loading || panelBusy" :aria-current="section === 'workspace' ? 'page' : undefined" @click="navigate('workspace')"><AppIcon name="workspace" :size="17" /><span>需求工作台</span><span v-if="section === 'workspace'" class="nav-dot"></span></button>
       <button v-if="canViewAdmin" type="button" class="current-nav" :disabled="loading || panelBusy" @click="navigate('admin')">网站后台统计</button>
       <RecordList
-        v-if="section === 'workspace'"
+        v-if="section !== 'admin'"
         :records="records"
         :loading="recordsLoading || loading || panelBusy"
         :error="historyError"
-        :selected-id="recordId"
-        @select="openRecord"
+        :selected-id="shortcutRecordId"
+        :active-section="directoryRecordId ? section : ''"
+        @select="openDirectoryRecord"
+        @shortcut="openHistoryShortcut"
         @refresh="refreshRecords"
       />
-      <SidebarDirectories :section="section" :counts="directoryCounts" :disabled="loading || panelBusy" @navigate="navigate" />
+      <SidebarDirectories :section="section" :counts="directoryCounts" :disabled="loading || panelBusy" :record-id="shortcutRecordId" :record-title="shortcutRecordTitle" :scope="scopeMode" @navigate="navigateDirectory" @scope="changeScope" />
       <div class="sidebar-footer"><AppIcon name="shield" :size="18" /><div>本地分析 · 安心留存<span>聊天资料保存在这台电脑</span></div></div>
     </aside>
     <main class="main">
       <header class="topbar"><span>工作空间 <span class="breadcrumb-divider">/</span> <strong>{{ sectionTitle }}</strong></span><div class="session-tools"><span>{{ currentUser.username }}</span><button v-if="canViewAdmin" type="button" :disabled="loading || panelBusy" @click="navigate(section === 'admin' ? 'workspace' : 'admin')">{{ section === 'admin' ? '返回工作台' : '后台统计' }}</button><button type="button" :disabled="loggingOut" @click="handleLogout">{{ loggingOut ? '退出中…' : '退出登录' }}</button></div></header>
       <div v-if="section === 'admin' && canViewAdmin" class="workspace"><AdminPanel /></div>
       <div v-if="directoryComponent" class="workspace">
-        <component :is="directoryComponent" :items="recordViews[section]" :loading="directoryLoading || recordsLoading || !workspaceReady" :error="directoryError" :failures="directoryFailures" :progress="directoryProgress" :total="records.length" :disabled="loading || panelBusy" @select="openDirectoryRecord" @refresh="refreshDirectory" />
+        <component :is="directoryComponent" :items="activeViews[section]" :loading="!workspaceReady || (directoryRecordId ? scopedLoading : directoryLoading || recordsLoading)" :error="directoryRecordId ? scopedError : directoryError" :failures="directoryRecordId ? [] : directoryFailures" :progress="directoryRecordId ? (scopedRecord ? 1 : 0) : directoryProgress" :total="directoryRecordId ? 1 : records.length" :scoped-record-id="directoryRecordId" :scope-label="directoryRecordId ? `范围：当前聊天 · ${shortcutRecordTitle} · #${directoryRecordId}` : ''" :disabled="loading || panelBusy" @select="openDirectoryRecord" @refresh="refreshDirectory" />
       </div>
       <div v-show="section === 'workspace'" class="workspace">
       <header class="page-header"><div><div class="eyebrow">CUSTOMER WORKSPACE</div><h1>让每一次沟通，都有清晰的下一步。</h1><p>从客户聊天中梳理需求、识别待确认事项，轻松推进订单跟进。</p></div><span class="workspace-label"><AppIcon name="shield" :size="16" />本机处理</span></header>

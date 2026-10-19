@@ -10,6 +10,8 @@ defineProps({
   progress: { type: Number, default: 0 },
   total: { type: Number, default: 0 },
   disabled: { type: Boolean, default: false },
+  scopedRecordId: { type: Number, default: null },
+  scopeLabel: { type: String, default: '' },
 })
 defineEmits(['select', 'refresh'])
 </script>
@@ -17,7 +19,7 @@ defineEmits(['select', 'refresh'])
 <template>
   <section class="record-content card" :aria-label="title">
     <header>
-      <div><h1>{{ title }} <span>{{ items.length }}</span></h1><p class="hint">{{ description }}</p><p class="hint scope">范围：最近 100 条可访问的分析记录 · 当前列表 {{ total }} 条</p></div>
+      <div><h1>{{ title }} <span>{{ items.length }}</span></h1><p class="hint">{{ description }}</p><p class="hint scope">{{ scopeLabel || `范围：最近 100 条可访问的分析记录 · 当前列表 ${total} 条` }}</p><button v-if="scopedRecordId" class="ghost" :disabled="loading || disabled" @click="$emit('select', { id: scopedRecordId })">打开这份聊天</button></div>
       <button class="ghost" :disabled="loading || disabled" @click="$emit('refresh')"><AppIcon name="refresh" :size="14" />刷新</button>
     </header>
     <p v-if="error" class="error" role="alert">{{ error }}</p>
