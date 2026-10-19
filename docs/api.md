@@ -1,5 +1,10 @@
 # 接口约定（C 维护）
 
+> 2026-10-19：所有 `/analyze`、`/records*` 请求现在必须带 `Authorization: Bearer <token>`，
+> 原业务响应形状保持兼容。新增 `/api/auth`、`/api/access-control`、`/api/admin` 和
+> `/api/usage` 的完整接口与权限表见 [访问控制说明](access-control.md)。
+> 新 `/api/*` 统一 `{code,message,data}`，401未登录、403权限不足、404记录不可见。
+
 前后端按本文件同时开工。**字段名称、数据类型、空值规则一旦确定，改动必须先在群里说明。**
 
 ## 责任边界（谁管哪一段）

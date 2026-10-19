@@ -21,6 +21,8 @@ class RecordDataError(Exception):
 def _connect() -> Iterator[sqlite3.Connection]:
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute("PRAGMA busy_timeout = 10000")
     try:
         with conn:
             yield conn
@@ -31,6 +33,11 @@ def _connect() -> Iterator[sqlite3.Connection]:
 
 def init_db() -> None:
     with _connect() as conn:
+        conn.execute('BEGIN IMMEDIATE')
+        from auth_store import init_schema
+        import audit
+        init_schema(conn)
+        audit.init_schema(conn)
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS records (
@@ -48,44 +55,49 @@ def init_db() -> None:
             "source_input": "TEXT",
             "source_image": "TEXT",
             "source_transcript": "TEXT NOT NULL DEFAULT ''",
+            "owner_id": "INTEGER REFERENCES users(id)",
         }.items():
             if name not in columns:
                 conn.execute(f"ALTER TABLE records ADD COLUMN {name} {declaration}")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_records_owner ON records(owner_id, id DESC)")
 
 
 def save_record(
     text: str, result: dict, *, source_input: dict | None = None,
     source_image: str | None = None, source_transcript: str = "",
+    owner_id: int | None = None,
 ) -> int:
     now = datetime.now().isoformat(timespec="seconds")
     title = text.strip().splitlines()[0][:30] if text.strip() else "未命名"
     with _connect() as conn:
         cur = conn.execute(
             "INSERT INTO records (title, text, result, created_at, updated_at,"
-            " source_input, source_image, source_transcript) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            " source_input, source_image, source_transcript, owner_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (title, text, json.dumps(result, ensure_ascii=False), now, now,
              json.dumps(source_input, ensure_ascii=False) if source_input is not None else None,
-             source_image, source_transcript),
+             source_image, source_transcript, owner_id),
         )
         return int(cur.lastrowid)
 
 
-def list_records() -> list[dict]:
+def list_records(*, owner_id: int | None = None, include_all: bool = True) -> list[dict]:
     with _connect() as conn:
         rows = conn.execute(
             "SELECT id, title, created_at, updated_at FROM records"
-            " ORDER BY id DESC LIMIT 100"
+            + ("" if include_all else " WHERE owner_id = ?")
+            + " ORDER BY id DESC LIMIT 100",
+            () if include_all else (owner_id,),
         ).fetchall()
     return [dict(row) for row in rows]
 
 
-def get_record(record_id: int) -> dict | None:
+def get_record(record_id: int, *, owner_id: int | None = None, include_all: bool = True) -> dict | None:
     with _connect() as conn:
         row = conn.execute(
             "SELECT id, title, text, result, created_at, updated_at,"
             " source_input, source_image, source_transcript FROM records"
-            " WHERE id = ?",
-            (record_id,),
+            " WHERE id = ?" + ("" if include_all else " AND owner_id = ?"),
+            (record_id,) if include_all else (record_id, owner_id),
         ).fetchone()
     if row is None:
         return None
@@ -107,11 +119,13 @@ def get_record(record_id: int) -> dict | None:
     return record
 
 
-def update_result(record_id: int, result: dict) -> bool:
+def update_result(record_id: int, result: dict, *, owner_id: int | None = None, include_all: bool = True) -> bool:
     now = datetime.now().isoformat(timespec="seconds")
     with _connect() as conn:
         cur = conn.execute(
-            "UPDATE records SET result = ?, updated_at = ? WHERE id = ?",
-            (json.dumps(result, ensure_ascii=False), now, record_id),
+            "UPDATE records SET result = ?, updated_at = ? WHERE id = ?"
+            + ("" if include_all else " AND owner_id = ?"),
+            (json.dumps(result, ensure_ascii=False), now, record_id)
+            + (() if include_all else (owner_id,)),
         )
         return cur.rowcount > 0

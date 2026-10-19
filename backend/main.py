@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Literal, TypedDict
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
@@ -21,8 +21,13 @@ from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictStr, ValidationError, model_validator
 from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import UploadFile
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 import database
+import audit
+from auth import permission
+from auth_routes import router as auth_router
+from access_routes import router as access_router
 from ai_service import analyze_chat
 from ai_contract import AnalysisOutcome
 
@@ -39,6 +44,26 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="聊天分析 API", version="0.1.0", lifespan=lifespan)
+app.include_router(auth_router)
+app.include_router(access_router)
+app.include_router(audit.routes())
+app.middleware('http')(audit.record_request)
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_error(request: Request, exc: StarletteHTTPException):
+    content = ({'code': exc.status_code, 'message': str(exc.detail), 'data': None}
+               if request.url.path.startswith('/api/') else {'detail': exc.detail})
+    return JSONResponse(status_code=exc.status_code, content=content, headers=exc.headers)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error(request: Request, exc: RequestValidationError):
+    # Never echo password/token inputs from Pydantic errors.
+    details = [{'loc': list(e['loc']), 'type': e['type'], 'msg': e['msg']} for e in exc.errors()]
+    content = ({'code': 422, 'message': '输入格式不正确，请检查字段及长度', 'data': None}
+               if request.url.path.startswith('/api/') else {'detail': details})
+    return JSONResponse(status_code=422, content=content)
 
 # 开发阶段允许前端本地地址跨域访问
 app.add_middleware(
@@ -129,7 +154,8 @@ async def database_error(request: Request, exc: sqlite3.Error) -> JSONResponse:
     )
     return JSONResponse(
         status_code=500,
-        content={"detail": "数据库操作失败，请联系 C 检查服务端日志"},
+        content=({'code':500,'message':'数据库操作失败，请检查服务端日志','data':None}
+                 if request.url.path.startswith('/api/') else {"detail": "数据库操作失败，请联系 C 检查服务端日志"}),
     )
 
 
@@ -141,7 +167,8 @@ async def record_data_error(request: Request, exc: database.RecordDataError) -> 
     )
     return JSONResponse(
         status_code=500,
-        content={"detail": "历史记录内容损坏，请联系 C 检查服务端日志"},
+        content=({'code':500,'message':'历史记录内容损坏，请检查服务端日志','data':None}
+                 if request.url.path.startswith('/api/') else {"detail": "历史记录内容损坏，请联系 C 检查服务端日志"}),
     )
 
 
@@ -294,6 +321,7 @@ def validate_image(image_bytes: bytes, declared_mime: str | None) -> str:
 def _analyze_and_save(
     model_text: str, original_text: str, source_input: dict,
     image_bytes: bytes | None = None, image_mime: str | None = None,
+    owner_id: int | None = None,
 ) -> dict:
     source_transcript = ""
     try:
@@ -339,7 +367,7 @@ def _analyze_and_save(
         source_image = f"data:{image_mime};base64," + base64.b64encode(image_bytes).decode("ascii")
     record_id = database.save_record(
         source_text, result, source_input=source_input,
-        source_image=source_image, source_transcript=source_transcript,
+        source_image=source_image, source_transcript=source_transcript, owner_id=owner_id,
     )
     return {"id": record_id, **result}
 
@@ -357,7 +385,7 @@ def _analyze_and_save(
         }}},
     }},
 })
-async def analyze(request: Request) -> dict:
+async def analyze(request: Request, user=Depends(permission('analysis:run'))) -> dict:
     """JSON text/messages 或 multipart text/image；响应六字段保持不变。"""
     size = 0
     chunks = []
@@ -386,7 +414,7 @@ async def analyze(request: Request) -> dict:
             raise HTTPException(status_code=400, detail="图片表单无法读取，请重新上传") from None
         return await run_in_threadpool(
             _analyze_and_save, original_text.strip(), original_text,
-            {"text": original_text}, image_bytes, image_mime,
+            {"text": original_text}, image_bytes, image_mime, user['id'],
         )
     if content_type != "application/json":
         raise HTTPException(status_code=415, detail="请使用 JSON 文本或 multipart 图片表单")
@@ -401,26 +429,26 @@ async def analyze(request: Request) -> dict:
     original_text = payload.text if payload.text is not None else chat["text"]
     return await run_in_threadpool(
         _analyze_and_save, chat["text"], original_text,
-        original_payload,
+        original_payload, owner_id=user['id'],
     )
 
 
 @app.get("/records")
-def list_records() -> list:
-    return database.list_records()
+def list_records(user=Depends(permission('records:read'))) -> list:
+    return database.list_records(**_scope(user))
 
 
 @app.get("/records/{record_id}")
-def get_record(record_id: int) -> dict:
-    record = database.get_record(record_id)
+def get_record(record_id: int, user=Depends(permission('records:read'))) -> dict:
+    record = database.get_record(record_id, **_scope(user))
     if record is None:
         raise HTTPException(status_code=404, detail="记录不存在")
     return record
 
 
 @app.put("/records/{record_id}")
-def update_record(record_id: int, payload: SaveRequest) -> dict:
-    record = database.get_record(record_id)
+def update_record(record_id: int, payload: SaveRequest, user=Depends(permission('records:write'))) -> dict:
+    record = database.get_record(record_id, **_scope(user))
     if record is None:
         raise HTTPException(status_code=404, detail="记录不存在")
     result = payload.result.model_dump(exclude={"is_sample"})
@@ -428,14 +456,14 @@ def update_record(record_id: int, payload: SaveRequest) -> dict:
     # 对没有来源标记的旧记录保留缺失状态，不擅自判断其来源。
     if "is_sample" in record["result"]:
         result["is_sample"] = record["result"]["is_sample"]
-    if not database.update_result(record_id, result):
+    if not database.update_result(record_id, result, **_scope(user)):
         raise HTTPException(status_code=404, detail="记录不存在")
     return {"ok": True}
 
 
 @app.get("/records/{record_id}/export")
-def export_record(record_id: int) -> JSONResponse:
-    record = database.get_record(record_id)
+def export_record(record_id: int, user=Depends(permission('records:export'))) -> JSONResponse:
+    record = database.get_record(record_id, **_scope(user))
     if record is None:
         raise HTTPException(status_code=404, detail="记录不存在")
     return JSONResponse(
@@ -444,3 +472,40 @@ def export_record(record_id: int) -> JSONResponse:
             "Content-Disposition": f'attachment; filename="record-{record_id}.json"'
         },
     )
+
+
+def _scope(user):
+    """Every HTTP record operation supplies an explicit server-trusted scope."""
+    return {'owner_id': user['id'], 'include_all': 'records:all' in user['permissions']}
+
+
+@app.post('/api/analyze')
+async def api_analyze(request: Request, user=Depends(permission('analysis:run'))):
+    return {'code':0,'message':'分析成功','data':await analyze(request, user)}
+
+
+@app.get('/api/records')
+def api_records(user=Depends(permission('records:read'))):
+    return {'code':0,'message':'ok','data':list_records(user)}
+
+
+@app.get('/api/records/{record_id}')
+def api_record(record_id: int, user=Depends(permission('records:read'))):
+    return {'code':0,'message':'ok','data':get_record(record_id,user)}
+
+
+@app.put('/api/records/{record_id}')
+def api_update_record(record_id: int, payload: SaveRequest, user=Depends(permission('records:write'))):
+    return {'code':0,'message':'保存成功','data':update_record(record_id,payload,user)}
+
+
+@app.get('/api/records/{record_id}/export')
+def api_export_record(record_id: int, user=Depends(permission('records:export'))):
+    return {'code':0,'message':'ok','data':get_scoped_export(record_id,user)}
+
+
+def get_scoped_export(record_id,user):
+    record=database.get_record(record_id,**_scope(user))
+    if record is None:
+        raise HTTPException(404,'记录不存在')
+    return record

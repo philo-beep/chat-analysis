@@ -4,6 +4,7 @@ Use --images for actual local Qwen calls. Results are measured, never fixture ou
 """
 import argparse
 import json
+import os
 import sys
 import tempfile
 import time
@@ -13,6 +14,7 @@ from unittest.mock import patch
 BACKEND = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BACKEND))
 import database
+import auth_store
 import main
 from fastapi.testclient import TestClient
 
@@ -56,7 +58,15 @@ def run(images=False):
     measurements = []
     with tempfile.TemporaryDirectory(prefix='keyoushu-real-acceptance-') as temp:
         with patch.object(database, 'DB_PATH', Path(temp)/'acceptance.db'):
-            with TestClient(main.app, raise_server_exceptions=False) as client:
+            with patch.dict(os.environ, {'KEYOUSHU_JWT_SECRET': 'acceptance-test-only-c1560b6ecc124a86982cf9e97ecc89d0'}), TestClient(main.app, raise_server_exceptions=False) as client:
+                # 真实模型验收也必须经过正式鉴权；账号只存在于临时数据库。
+                auth_store.create_user('acceptance-admin', 'Acceptance-admin-987654!', role_codes=['admin'])
+                login = client.post('/api/auth/login', json={
+                    'username': 'acceptance-admin', 'password': 'Acceptance-admin-987654!',
+                })
+                if login.status_code != 200:
+                    raise RuntimeError(f'Acceptance login failed: {login.status_code} {login.text}')
+                client.headers['Authorization'] = f"Bearer {login.json()['data']['token']}"
                 for kind in (['text','image'] if images else ['text']):
                     for case in cases:
                         start = time.monotonic()

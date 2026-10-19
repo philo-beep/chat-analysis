@@ -29,6 +29,12 @@ import sys
 from pathlib import Path
 import database
 database.DB_PATH = Path(sys.argv[1])
+database.init_db()
+import auth_store
+with database._connect() as connection:
+    exists = connection.execute("SELECT id FROM users WHERE username = ?", ("smoke-admin",)).fetchone()
+if not exists:
+    auth_store.create_user("smoke-admin", "Smoke-admin-987654!", role_codes=["admin"])
 import main
 from ai_contract import AnalysisOutcome
 def fixture(text):
@@ -45,7 +51,8 @@ uvicorn.run(main.app, host="127.0.0.1", port=int(sys.argv[2]), log_level="warnin
         [sys.executable, "-B", "-c", bootstrap, str(db_path), str(port)],
         cwd=BACKEND, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         text=True, encoding="utf-8",
-        env={**os.environ, "PYTHONIOENCODING": "utf-8"},
+        env={**os.environ, "PYTHONIOENCODING": "utf-8",
+             "KEYOUSHU_JWT_SECRET": "smoke-test-only-a267ebf246c84e50bb96637be31c8d8c"},
         creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
     )
     try:
@@ -72,10 +79,13 @@ uvicorn.run(main.app, host="127.0.0.1", port=int(sys.argv[2]), log_level="warnin
             process.communicate(timeout=10)
 
 
-def request(base, method, route, payload=None):
+def request(base, method, route, payload=None, *, token=None):
     data = None if payload is None else json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    headers = {"Content-Type": "application/json"}
+    if token is not None:
+        headers["Authorization"] = f"Bearer {token}"
     req = Request(base + route, data=data, method=method,
-                  headers={"Content-Type": "application/json"})
+                  headers=headers)
     try:
         response = urlopen(req, timeout=10)
     except HTTPError as error:
@@ -84,56 +94,68 @@ def request(base, method, route, payload=None):
         return response.status, json.load(response), response.headers
 
 
+def login(base):
+    status, body, _ = request(base, "POST", "/api/auth/login", {
+        "username": "smoke-admin", "password": "Smoke-admin-987654!",
+    })
+    assert status == 200, (status, body)
+    return body["data"]["token"]
+
+
 def main():
     with tempfile.TemporaryDirectory(prefix="keyoushu-http-test-") as temp:
         db_path = Path(temp) / "smoke.db"
         text = (BACKEND.parent / "samples/chat-001.txt").read_text(encoding="utf-8")
         with server(db_path) as base:
             assert request(base, "GET", "/health")[:2] == (200, {"status": "ok"})
-            status, analyzed, _ = request(base, "POST", "/analyze", {"text": text})
+            assert request(base, "GET", "/records")[0] == 401
+            token = login(base)
+            status, analyzed, _ = request(base, "POST", "/analyze", {"text": text}, token=token)
             assert status == 200 and analyzed["is_sample"] is True
             record_id = analyzed["id"]
-            status, records, _ = request(base, "GET", "/records")
+            status, records, _ = request(base, "GET", "/records", token=token)
             assert status == 200 and records[0]["id"] == record_id
-            status, record, _ = request(base, "GET", f"/records/{record_id}")
+            status, record, _ = request(base, "GET", f"/records/{record_id}", token=token)
             assert status == 200 and record["text"] == text
             analyzed["requirements"][0]["value"] = "150 件（人工修改）"
             analyzed["reply"] = "数量按150件记录，请再确认尺码和交期。"
             analyzed["is_sample"] = False  # 编辑不能修改来源标记。
-            status, saved, _ = request(base, "PUT", f"/records/{record_id}", {"result": analyzed})
+            status, saved, _ = request(base, "PUT", f"/records/{record_id}", {"result": analyzed}, token=token)
             assert status == 200 and saved == {"ok": True}
-            status, exported, headers = request(base, "GET", f"/records/{record_id}/export")
+            status, exported, headers = request(base, "GET", f"/records/{record_id}/export", token=token)
             assert status == 200 and exported["result"]["reply"] == analyzed["reply"]
             assert exported["result"]["is_sample"] is True and exported["text"] == text
             assert f"record-{record_id}.json" in headers["Content-Disposition"]
-            assert request(base, "POST", "/analyze", {"text": " "})[0] == 400
-            assert request(base, "GET", "/records/999999")[0] == 404
+            assert request(base, "POST", "/analyze", {"text": " "}, token=token)[0] == 400
+            assert request(base, "GET", "/records/999999", token=token)[0] == 404
             assert request(base, "PUT", f"/records/{record_id}",
-                           {"result": {"reply": "missing fields"}})[0] == 422
+                           {"result": {"reply": "missing fields"}}, token=token)[0] == 422
             status, message_result, _ = request(base, "POST", "/analyze", {"messages": [
                 {"role": "customer", "content": "先做100件。"},
                 {"role": "seller", "content": "好的。"},
-            ]})
+            ]}, token=token)
             assert status == 200
-            status, message_record, _ = request(base, "GET", f'/records/{message_result["id"]}')
+            status, message_record, _ = request(base, "GET", f'/records/{message_result["id"]}', token=token)
             assert status == 200 and message_record["text"].startswith("[客户]")
             assert message_record["source_input"]["messages"][1]["role"] == "seller"
             picture = io.BytesIO()
             Image.new("RGB", (16, 16), "white").save(picture, format="PNG")
             response = httpx.post(base + "/analyze", data={"text": "客户名称：张先生"},
-                                  files={"image": ("chat.png", picture.getvalue(), "image/png")}, timeout=10)
+                                  files={"image": ("chat.png", picture.getvalue(), "image/png")},
+                                  headers={"Authorization": f"Bearer {token}"}, timeout=10)
             assert response.status_code == 200, response.text
             image_id = response.json()["id"]
-            status, image_record, _ = request(base, "GET", f"/records/{image_id}")
+            status, image_record, _ = request(base, "GET", f"/records/{image_id}", token=token)
             assert status == 200 and image_record["source_image"].startswith("data:image/png;base64,")
             assert image_record["source_transcript"] == "客户：数量改为150件。"
             print("PASS: real HTTP health/analyze/list/detail/edit/export, UTF-8, provenance, 400/404/422")
             print("PASS: real HTTP messages + multipart image upload, original image/transcript persisted (model fixtures)")
         with server(db_path) as base:
-            status, reopened, _ = request(base, "GET", f"/records/{record_id}")
+            token = login(base)
+            status, reopened, _ = request(base, "GET", f"/records/{record_id}", token=token)
             assert status == 200 and reopened["result"]["reply"] == analyzed["reply"]
             assert reopened["result"]["is_sample"] is True
-            status, reopened_image, _ = request(base, "GET", f"/records/{image_id}/export")
+            status, reopened_image, _ = request(base, "GET", f"/records/{image_id}/export", token=token)
             assert status == 200 and reopened_image["source_image"] == image_record["source_image"]
             assert reopened_image["source_transcript"] == image_record["source_transcript"]
             print("PASS: Uvicorn process restarted; saved edits and sample flag survived")

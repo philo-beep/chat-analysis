@@ -1,7 +1,7 @@
 <!-- 结果与编辑，B 负责 -->
 <script setup>
-import { computed, ref, watch } from 'vue'
-import { getRecord, saveRecord } from '../api.js'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { exportRecordData, getRecord, saveRecord, trackCopy } from '../api.js'
 import AppIcon from './AppIcon.vue'
 
 const props = defineProps({
@@ -44,6 +44,7 @@ function clearSessionState() {
 }
 
 watch(() => [props.sessionActive, props.sessionKey], clearSessionState, { flush: 'sync' })
+onBeforeUnmount(clearSessionState)
 
 function setBusy(value) {
   busy.value = value
@@ -98,10 +99,14 @@ async function copyReply() {
   error.value = ''
   message.value = ''
   const version = operationVersion.value
+  const id = props.recordId
   try {
     if (!navigator.clipboard?.writeText) throw new Error('浏览器不支持剪贴板，请手动选择并复制回复草稿')
     await navigator.clipboard.writeText(draft.value.reply)
-    if (props.sessionActive && operationVersion.value === version) message.value = '回复草稿已复制'
+    if (props.sessionActive && operationVersion.value === version) {
+      message.value = '回复草稿已复制'
+      if (id && isCurrent(version, id)) trackCopy(id).catch(() => { /* 统计失败不影响复制。 */ })
+    }
   } catch (e) {
     if (props.sessionActive && operationVersion.value === version) {
       error.value = e instanceof Error ? `复制失败：${e.message}` : '复制失败，请手动复制回复草稿'
@@ -118,9 +123,9 @@ async function exportJson() {
   setBusy(true)
   try {
     validate()
-    // 导出前先保存，再经 A 的统一详情请求读取完整记录，避免直接 fetch 绕过凭据处理。
+    // 导出前先保存，再经统一导出请求校验权限并记录真实导出调用。
     if (dirty.value && !(await persist(version, id))) return
-    const record = await getRecord(id)
+    const record = await exportRecordData(id)
     if (!isCurrent(version, id)) return
     if (!record || !record.result) {
       throw new Error('服务端返回的记录不完整，无法导出')

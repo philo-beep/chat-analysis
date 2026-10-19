@@ -1,11 +1,14 @@
 <!-- 页面总入口，A 负责 -->
 <script setup>
-import { ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import ChatInput from './components/ChatInput.vue'
 import RecordList from './components/RecordList.vue'
 import ResultPanel from './components/ResultPanel.vue'
 import AppIcon from './components/AppIcon.vue'
-import { analyze, getRecord, listRecords } from './api.js'
+import LoginPanel from './components/LoginPanel.vue'
+import AdminPanel from './components/AdminPanel.vue'
+import { analyze, getRecord, listRecords, getCurrentUser, logout, trackPageView } from './api.js'
+import { currentUser, sessionVersion, getAuthToken, establishSession, restoreSessionUser, clearSession } from './auth.js'
 
 const records = ref([])
 const result = ref(null)
@@ -17,10 +20,21 @@ const recordsLoading = ref(false)
 const originalText = ref('')
 const sourceImage = ref('')
 const panelBusy = ref(false)
-const lastRecordKey = 'keyoushu.lastRecordId'
+const authReady = ref(false)
+const authChecking = ref(false)
+const notice = ref('')
+const restoreFailed = ref(false)
+const loggingOut = ref(false)
+const section = ref('workspace')
+const canViewAdmin = computed(() => currentUser.value?.permissions?.includes('admin:stats'))
+
+function isCurrent(version) {
+  return !!currentUser.value && sessionVersion.value === version
+}
 
 function rememberRecord(id) {
-  try { localStorage.setItem(lastRecordKey, String(id)) } catch { /* 隐私模式不影响保存接口 */ }
+  if (!currentUser.value) return
+  try { localStorage.setItem(`keyoushu.lastRecordId.${currentUser.value.id}`, String(id)) } catch { /* 存储不可用不影响接口。 */ }
 }
 
 function showRecord(record) {
@@ -31,83 +45,173 @@ function showRecord(record) {
   rememberRecord(record.id)
 }
 
-async function handleSaved(record) {
-  showRecord(record)
-  await refreshRecords()
-}
+// 事件处理器捕获渲染时的账号版本，避免已卸载面板的迟到事件污染新账号。
+const handleSaved = computed(() => {
+  const version = sessionVersion.value
+  return async (record) => {
+    if (!isCurrent(version)) return
+    showRecord(record)
+    await refreshRecords()
+  }
+})
+
+const handlePanelBusy = computed(() => {
+  const version = sessionVersion.value
+  return (value) => { if (isCurrent(version)) panelBusy.value = value }
+})
 
 async function handleAnalyze(payload) {
-  if (loading.value || panelBusy.value) return
+  if (!currentUser.value || loading.value || panelBusy.value) return
+  const version = sessionVersion.value
   loading.value = true
   error.value = ''
   sourceImage.value = ''
   try {
     const response = await analyze(payload)
+    if (!isCurrent(version)) return
     recordId.value = response.id ?? null
     result.value = response
     originalText.value = payload.text || ''
     sourceImage.value = ''
     if (response.id) {
       rememberRecord(response.id)
-      // 截图的识别原文保存在详情中，分析响应只包含约定业务字段。
       try {
-        showRecord(await getRecord(response.id))
+        const record = await getRecord(response.id)
+        if (!isCurrent(version)) return
+        showRecord(record)
       } catch (e) {
-        error.value = `分析已完成，但原文读取失败：${e.message}`
+        if (isCurrent(version)) error.value = `分析已完成，但原文读取失败：${e.message}`
       }
     }
-    await refreshRecords()
+    if (isCurrent(version)) await refreshRecords()
   } catch (e) {
-    error.value = e instanceof Error ? e.message : '分析失败，请稍后重试'
+    if (isCurrent(version)) error.value = e instanceof Error ? e.message : '分析失败，请稍后重试'
   } finally {
-    loading.value = false
+    if (isCurrent(version)) loading.value = false
   }
 }
 
 async function refreshRecords() {
+  if (!currentUser.value) return
+  const version = sessionVersion.value
   recordsLoading.value = true
   historyError.value = ''
   try {
-    records.value = await listRecords()
+    const response = await listRecords()
+    if (isCurrent(version)) records.value = response
   } catch (e) {
-    historyError.value = e instanceof Error ? `历史记录加载失败：${e.message}` : '历史记录加载失败，请重试'
+    if (isCurrent(version)) historyError.value = e instanceof Error ? `历史记录加载失败：${e.message}` : '历史记录加载失败，请重试'
   } finally {
-    recordsLoading.value = false
+    if (isCurrent(version)) recordsLoading.value = false
   }
 }
 
-// 列表里只有标题和时间，没有 result，所以点开时要按 id 再取一次完整记录。
 async function openRecord(record) {
-  if (loading.value || panelBusy.value) return
+  if (!currentUser.value || loading.value || panelBusy.value) return
+  const version = sessionVersion.value
   loading.value = true
   error.value = ''
   try {
     const full = await getRecord(record.id)
-    showRecord(full)
+    if (isCurrent(version)) showRecord(full)
   } catch (e) {
-    error.value = e instanceof Error ? `无法打开记录 #${record.id}：${e.message}` : '记录加载失败，请重试'
+    if (isCurrent(version)) error.value = e instanceof Error ? `无法打开记录 #${record.id}：${e.message}` : '记录加载失败，请重试'
   } finally {
-    loading.value = false
+    if (isCurrent(version)) loading.value = false
   }
 }
 
-async function initialize() {
+function resetWorkspace() {
+  records.value = []
+  result.value = null
+  recordId.value = null
+  originalText.value = ''
+  sourceImage.value = ''
+  error.value = ''
+  historyError.value = ''
+  loading.value = false
+  recordsLoading.value = false
+  panelBusy.value = false
+  section.value = 'workspace'
+}
+
+async function initializeWorkspace() {
+  const version = sessionVersion.value
+  const userId = currentUser.value?.id
   await refreshRecords()
+  if (!isCurrent(version)) return
   let lastId
-  try { lastId = Number(localStorage.getItem(lastRecordKey)) } catch { return }
+  try { lastId = Number(localStorage.getItem(`keyoushu.lastRecordId.${userId}`)) } catch { return }
   if (Number.isInteger(lastId) && lastId > 0) await openRecord({ id: lastId })
 }
 
-initialize()
+watch(sessionVersion, () => {
+  resetWorkspace()
+  if (currentUser.value) initializeWorkspace()
+  else if (!notice.value) notice.value = '请登录后继续使用。'
+}, { flush: 'sync' })
+
+function handleAuthenticated(data) {
+  restoreFailed.value = false
+  notice.value = ''
+  establishSession(data)
+}
+
+async function restoreLogin() {
+  if (authChecking.value) return
+  authChecking.value = true
+  restoreFailed.value = false
+  const token = getAuthToken()
+  try {
+    if (token) restoreSessionUser(await getCurrentUser(), token)
+  } catch (e) {
+    if (getAuthToken() === token && e.status !== 401) {
+      restoreFailed.value = true
+      notice.value = `暂时无法验证登录状态：${e.message}。可重试或重新登录。`
+    } else notice.value = '登录已失效，请重新登录。'
+  } finally {
+    authReady.value = true
+    authChecking.value = false
+  }
+}
+
+async function handleLogout() {
+  if (loggingOut.value) return
+  const token = getAuthToken()
+  loggingOut.value = true
+  try {
+    await logout()
+    notice.value = '已退出，服务端登录凭据已撤销。'
+  } catch (e) {
+    notice.value = e.status === 401 ? '登录已失效。' : `本机已退出，但未能确认服务端撤销：${e.message}。原凭据可能在到期前仍有效。`
+  } finally {
+    clearSession(token)
+    loggingOut.value = false
+  }
+}
+
+// 仅在首次展示及真实页面切换时上报，不因刷新统计或数据加载重复计数。
+watch(() => authReady.value ? `${currentUser.value?.id || 'anonymous'}:${currentUser.value ? section.value : 'login'}` : '', (page) => {
+  if (page && currentUser.value) trackPageView().catch(() => { /* 统计失败不阻塞业务。 */ })
+})
+
+restoreLogin()
 </script>
 
 <template>
-  <div class="layout">
+  <p v-if="!authReady" role="status">正在验证登录状态…</p>
+  <template v-else-if="!currentUser">
+    <LoginPanel :notice="notice" @authenticated="handleAuthenticated" />
+    <button v-if="restoreFailed" class="restore-button" type="button" :disabled="authChecking" @click="restoreLogin">{{ authChecking ? '正在重试…' : '重试恢复登录' }}</button>
+  </template>
+  <div v-else :key="sessionVersion" class="layout">
     <aside class="sidebar">
       <div class="brand"><span class="brand-mark"><AppIcon name="workspace" :size="23" /></span><div><strong>客有数<span class="brand-dot">.</span></strong><span class="brand-subtitle">客户需求与跟进助手</span></div></div>
       <div class="sidebar-label">工作空间</div>
-      <div class="current-nav"><AppIcon name="workspace" :size="17" /><span>需求工作台</span><span class="nav-dot"></span></div>
+      <button type="button" class="current-nav" @click="section = 'workspace'"><AppIcon name="workspace" :size="17" /><span>需求工作台</span><span class="nav-dot"></span></button>
+      <button v-if="canViewAdmin" type="button" class="current-nav" @click="section = 'admin'">网站后台统计</button>
       <RecordList
+        v-if="section === 'workspace'"
         :records="records"
         :loading="recordsLoading || loading || panelBusy"
         :error="historyError"
@@ -118,19 +222,22 @@ initialize()
       <div class="sidebar-footer"><AppIcon name="shield" :size="18" /><div>本地分析 · 安心留存<span>聊天资料保存在这台电脑</span></div></div>
     </aside>
     <main class="main">
-      <header class="topbar"><span>工作空间 <span class="breadcrumb-divider">/</span> <strong>需求工作台</strong></span><span class="local-badge"><i></i>本地工作空间</span></header>
-      <div class="workspace">
+      <header class="topbar"><span>工作空间 <span class="breadcrumb-divider">/</span> <strong>{{ section === 'admin' ? '网站后台统计' : '需求工作台' }}</strong></span><div class="session-tools"><span>{{ currentUser.username }}</span><button v-if="canViewAdmin" type="button" @click="section = section === 'admin' ? 'workspace' : 'admin'">{{ section === 'admin' ? '返回工作台' : '后台统计' }}</button><button type="button" :disabled="loggingOut" @click="handleLogout">{{ loggingOut ? '退出中…' : '退出登录' }}</button></div></header>
+      <div v-if="section === 'admin' && canViewAdmin" class="workspace"><AdminPanel /></div>
+      <div v-else class="workspace">
       <header class="page-header"><div><div class="eyebrow">CUSTOMER WORKSPACE</div><h1>让每一次沟通，都有清晰的下一步。</h1><p>从客户聊天中梳理需求、识别待确认事项，轻松推进订单跟进。</p></div><span class="workspace-label"><AppIcon name="shield" :size="16" />本机处理</span></header>
       <ChatInput :loading="loading || panelBusy" @submit="handleAnalyze" />
       <p v-if="error" class="error" role="alert">{{ error }}</p>
       <ResultPanel
+        :session-active="!!currentUser"
+        :session-key="sessionVersion"
         :result="result"
         :record-id="recordId"
         :original-text="originalText"
         :source-image="sourceImage"
         :disabled="loading"
         @saved="handleSaved"
-        @busy="panelBusy = $event"
+        @busy="handlePanelBusy"
       />
       <footer class="workspace-footer"><span>客有数 · 把沟通变成行动</span><span>分析结果可编辑，请核对原文后使用</span></footer>
       </div>
@@ -139,6 +246,9 @@ initialize()
 </template>
 
 <style scoped>
+.session-tools { display: flex; align-items: center; gap: 10px; }
+.session-tools button { padding: 6px 10px; font-size: 12px; }
+.restore-button { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); }
 .layout {
   display: grid;
   grid-template-columns: 252px minmax(0, 1fr);

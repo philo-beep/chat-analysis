@@ -1,5 +1,6 @@
 // 前端请求封装，A 负责。
 // 约定见 docs/api.md：字段名称、数据类型、空值规则都要固定。
+import { clearSession, getAuthToken } from './auth.js'
 
 const BASE_URL = import.meta.env?.VITE_API_BASE ?? 'http://127.0.0.1:8000'
 
@@ -43,13 +44,16 @@ function validationMessage(detail) {
 }
 
 async function request(path, options = {}) {
+  const { anonymous = false, invalidateOn401 = true, ...fetchOptions } = options
+  const requestToken = anonymous ? '' : getAuthToken()
   const headers = new Headers(options.headers || {})
+  if (requestToken) headers.set('Authorization', `Bearer ${requestToken}`)
   if (options.body && !(options.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
   }
   let res
   try {
-    res = await fetch(`${BASE_URL}${path}`, { ...options, headers })
+    res = await fetch(`${BASE_URL}${path}`, { ...fetchOptions, headers })
   } catch {
     throw new Error('无法连接后端服务，请确认后端已启动后重试')
   }
@@ -63,12 +67,62 @@ async function request(path, options = {}) {
     }
   }
   if (!res.ok) {
+    if (res.status === 401 && requestToken && invalidateOn401) clearSession(requestToken)
     const detail = typeof body?.detail === 'string' ? body.detail
       : Array.isArray(body?.detail) ? validationMessage(body.detail) : ''
-    throw new Error(detail || `请求失败：${res.status} ${res.statusText}`)
+    const error = new Error(body?.message || detail || `请求失败：${res.status} ${res.statusText}`)
+    error.status = res.status
+    throw error
   }
   if (contentType.includes('application/json')) return body
   return res.text()
+}
+
+async function authRequest(path, options) {
+  const response = await request(path, options)
+  if (response?.code !== 0) throw new Error(response?.message || '服务端响应格式错误')
+  return response.data
+}
+
+export function login(username, password) {
+  return authRequest('/api/auth/login', {
+    method: 'POST', anonymous: true, body: JSON.stringify({ username, password }),
+  })
+}
+
+export function register(username, password) {
+  return authRequest('/api/auth/register', {
+    method: 'POST', anonymous: true, body: JSON.stringify({ username, password }),
+  })
+}
+
+export function getCurrentUser() {
+  return authRequest('/api/auth/me')
+}
+
+export function logout() {
+  return authRequest('/api/auth/logout', { method: 'POST' })
+}
+
+export function getAdminOverview(days = 7) {
+  return authRequest(`/api/admin/overview?days=${days}`)
+}
+
+export function getAdminActivity(limit = 50, offset = 0) {
+  return authRequest(`/api/admin/events?limit=${limit}&offset=${offset}&days=7`)
+}
+
+export function trackPageView() {
+  return authRequest('/api/usage/visit', {
+    method: 'POST', body: JSON.stringify({}),
+  })
+}
+
+// 非关键客户端统计失败不能干扰已经完成的复制或当前页面会话。
+export function trackCopy(id) {
+  return authRequest('/api/usage/copy', {
+    method: 'POST', invalidateOn401: false, body: JSON.stringify({ record_id: id }),
+  })
 }
 
 // 输入聊天原文和可选聊天截图，返回约定的分析结果。
@@ -104,4 +158,9 @@ export function saveRecord(id, result) {
 
 export function exportRecord(id) {
   return `${BASE_URL}/records/${id}/export`
+}
+
+// 下载同样通过统一请求层携带 token，不将凭据放进 URL。
+export function exportRecordData(id) {
+  return request(`/records/${id}/export`)
 }

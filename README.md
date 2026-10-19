@@ -48,6 +48,19 @@ uvicorn main:app --reload --port 8000
 
 后端地址：http://127.0.0.1:8000 ，接口文档：http://127.0.0.1:8000/docs
 
+首次运行后可在前端注册普通成员。管理员只能由本机命令或已有管理员创建：
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe manage_users.py --bootstrap-admins
+```
+
+该命令一次性创建两个不同随机密码的管理员，密码仅写入当前用户的
+`~/.codex/local-credentials/keyoushu-admins.txt`，不会打印到终端或提交 Git。
+若账号或凭据文件已存在，整批取消，避免覆盖。登录后点击“后台统计”查看访问与功能使用情况。
+所有分析/记录接口现均需 Bearer token；普通成员只能访问自己的记录，旧记录仅管理员可见。
+部署、接口、数据迁移和验证详见 [访问控制说明](docs/access-control.md)。
+
 ### 前端
 
 ```bash
