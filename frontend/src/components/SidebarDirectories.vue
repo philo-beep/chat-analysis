@@ -42,14 +42,14 @@ defineEmits(['navigate', 'scope'])
 <style scoped>
 .directories { flex-shrink: 0; margin-bottom: 20px; }
 .scope-controls { display: flex; gap: 4px; padding: 0 4px; }
-.scope-controls button { flex: 1; min-height: 30px; padding: 5px 6px; background: transparent; border: 1px solid #ffffff14; color: #97a8c3; font-size: 10px; }
-.scope-controls button[aria-pressed="true"] { background: #25406480; border-color: #5576ae45; color: #e2ecff; }
-.scope-controls button:hover:not(:disabled) { background: #ffffff0d; }
-.context { font-size: 10px; line-height: 1.7; color: #8c9cb6; margin: 8px 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.scope-controls button { flex: 1; min-height: 30px; padding: 5px 6px; background: transparent; border: 1px solid #dce3d1; color: #607253; font-size: 10px; }
+.scope-controls button[aria-pressed="true"] { background: #e1e8d5; border-color: #cbd6bc; color: #354b2d; }
+.scope-controls button:hover:not(:disabled) { background: #e9eddf; }
+.context { font-size: 10px; line-height: 1.7; color: #65735c; margin: 8px 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .record-list { margin-bottom: 6px; }
-.directory { width: 100%; justify-content: flex-start; padding: 10px 9px; min-height: 36px; font-size: 11px; font-weight: 500; color: #97a8c3; background: none; border: 1px solid transparent; }
-.directory:hover:not(:disabled) { background: #ffffff08; border-color: #ffffff08; }
-.directory.selected { background: #25406480; border-color: #5576ae45; color: #e2ecff; }
-.count { font-size: 10px; margin-left: auto; background: #ffffff0c; padding: 1px 6px; border-radius: 4px; color: #8fa5c6; }
+.directory { width: 100%; justify-content: flex-start; padding: 10px 9px; min-height: 36px; font-size: 11px; font-weight: 500; color: #607253; background: none; border: 1px solid transparent; }
+.directory:hover:not(:disabled) { background: #e9eddf; border-color: #e9eddf; }
+.directory.selected { background: #e1e8d5; border-color: #cbd6bc; color: #354b2d; }
+.count { font-size: 10px; margin-left: auto; background: #e6eadc; padding: 1px 6px; border-radius: 4px; color: #526247; }
 @media (max-width: 760px) { .directories { display: flex; flex-wrap: wrap; gap: 4px; margin: 12px 0 0; } .scope-controls { width: 100%; } .context { width: 100%; margin: 4px; } .record-list { margin: 0; } .directory { padding: 8px; } }
 </style>

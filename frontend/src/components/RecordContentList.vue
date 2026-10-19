@@ -48,20 +48,20 @@ defineEmits(['select', 'refresh', 'import'])
 .record-content { padding: 24px; }
 header { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
 h1 { font-size: 22px; margin-bottom: 10px; color: var(--ink); }
-h1 span { font-size: 12px; margin-left: 8px; background: #edf2ff; color: #657eaf; padding: 3px 8px; border-radius: 4px; }
+h1 span { font-size: 12px; margin-left: 8px; background: var(--soft); color: var(--brand); padding: 3px 8px; border-radius: 4px; }
 .hint { margin-bottom: 6px; }
 .scope { font-size: 11px; }
 .items { list-style: none; padding: 0; margin: 0; }
 .import-task { margin: 0 0 14px 12px; font-size: 12px; }
-.item { width: 100%; justify-content: flex-start; align-items: flex-start; text-align: left; gap: 16px; padding: 15px 12px; margin-bottom: 6px; background: none; border: 1px solid #e5eaf2; }
-.item:hover:not(:disabled) { background: #f3f6fc; border-color: #b9c8e6; }
+.item { width: 100%; justify-content: flex-start; align-items: flex-start; text-align: left; gap: 16px; padding: 15px 12px; margin-bottom: 6px; background: none; border: 1px solid var(--line); }
+.item:hover:not(:disabled) { background: #f6f8ef; border-color: #c5d2b5; }
 .item-body { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .text { font-size: 14px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
-.source { font-size: 12px; color: #65758f; overflow-wrap: anywhere; }
-.time { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #758197; }
-.sample { color: #946018; font-size: 11px; }
-img { width: 100px; height: 130px; object-fit: contain; background: #f3f5f9; border-radius: 6px; }
-.empty { text-align: center; padding: 30px 10px; color: #758197; background: #fafbfd; border: 1px dashed #e5eaf2; border-radius: 8px; }
+.source { font-size: 12px; color: #626f58; overflow-wrap: anywhere; }
+.time { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #626f58; }
+.sample { color: #856013; font-size: 11px; }
+img { width: 100px; height: 130px; object-fit: contain; background: var(--soft); border-radius: 6px; }
+.empty { text-align: center; padding: 30px 10px; color: #626f58; background: #fafbf7; border: 1px dashed var(--line); border-radius: 8px; }
 .empty p { margin: 10px 0 5px; font-size: 13px; }
 .empty span { font-size: 12px; line-height: 1.8; }
 @media (max-width: 760px) { .record-content { padding: 16px; } header { flex-wrap: wrap; } img { width: 65px; height: 90px; } .item { gap: 10px; padding: 12px 8px; } .time { flex-wrap: wrap; } }
