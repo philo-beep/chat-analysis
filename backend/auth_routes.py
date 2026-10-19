@@ -74,7 +74,7 @@ def register(body: RegisterBody, request: Request):
     try:
         user = auth_store.create_user(body.username, body.password, ["member"])
     except sqlite3.IntegrityError:
-        raise HTTPException(409, "用户名已被使用")
+        raise HTTPException(409, "用户名已存在，请更换用户名。")
     except ValueError as exc:
         raise HTTPException(422, str(exc))
     request.state.user = user

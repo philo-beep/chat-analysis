@@ -40,11 +40,17 @@ class AccessTests(unittest.TestCase):
         self.assertNotIn('admin:stats',me['permissions'])
         self.assertEqual(self.client.get('/api/admin/overview',headers=headers).status_code,403)
         self.assertEqual(self.client.post('/api/auth/register',json={'username':'injected','password':'valid-password123','role':'admin'}).status_code,422)
-        self.assertEqual(self.client.post('/api/auth/register',json={'username':'MEMBER_TEST','password':'valid-password123'}).status_code,409)
+        for username in ('member_test', 'MEMBER_TEST'):
+            duplicate=self.client.post('/api/auth/register',json={'username':username,'password':'valid-password123'})
+            self.assertEqual(duplicate.status_code,409)
+            self.assertEqual(duplicate.json()['message'],'用户名已存在，请更换用户名。')
         with database._connect() as conn:
             value=conn.execute("SELECT password_hash FROM users WHERE username='member_test'").fetchone()[0]
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM users WHERE username='member_test'").fetchone()[0],1)
         self.assertTrue(value.startswith('$argon2'))
         self.assertNotIn('password_hash',str(me))
+        # A rejected duplicate must never replace the original account's password.
+        self.login('member_test','Member-password-987!')
 
     def test_auth_failures_revoke_and_live_permissions(self):
         headers=self.register()
