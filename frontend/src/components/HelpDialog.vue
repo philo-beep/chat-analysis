@@ -11,4 +11,9 @@ const content = {
 }
 </script>
 <template><CalendarDialog :title="content[topic].title" @close="$emit('close')"><p v-for="text in content[topic].text" :key="text" class="explanation">{{ text }}</p><ol class="flow" aria-label="操作流程"><li v-for="(step, i) in content[topic].steps" :key="step"><span>{{ i + 1 }} · {{ step }}</span><b v-if="i < content[topic].steps.length - 1" aria-hidden="true">→</b></li></ol><button class="primary" @click="$emit('close')">知道了</button></CalendarDialog></template>
-<style scoped>.explanation{font-size:14px;line-height:1.9}.flow{list-style:none;display:flex;flex-wrap:wrap;gap:8px;padding:0;margin:20px 0}.flow li{display:flex;align-items:center;gap:8px}.flow span{background:#edf2ff;border:1px solid #d8e3fb;border-radius:6px;padding:10px;font-size:12px}.flow b{color:#8293af}</style>
+<style scoped>.explanation{font-size:14px;line-height:1.9}.flow{list-style:none;display:flex;flex-wrap:wrap;gap:8px;padding:0;margin:20px 0}.flow li{display:flex;align-items:center;gap:8px}.flow span{background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:10px;font-size:12px}.flow b{color:#6f7c64}
+.explanation { color: #526246; }
+.flow { background: var(--canvas); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+.flow li { min-width: 0; max-width: 100%; }
+.flow span { color: var(--ink); overflow-wrap: anywhere; line-height: 1.7; background: var(--surface); border-radius: 8px; }
+</style>
