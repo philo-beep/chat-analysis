@@ -6,6 +6,21 @@ import { hashForSection, routeFromHash, sectionFromHash } from '../src/navigatio
 const summary = (id, updated_at = 'v1') => ({ id, updated_at })
 const detail = (id) => ({ id, result: { tasks: [`任务 ${id}`], questions: [] } })
 
+test('扩展记录目录合并普通/推进/日期任务，问题保留确认答案与来源', () => {
+  const views = buildRecordViews([{ id: 9, title: '客户沟通', result: {
+    analysis_version: 2, tasks: ['普通建议'], action_states: { 0: { status: 'accepted' } },
+    suggested_tasks: [{ title: '对比方案', reason: '客户在比较竞品', priority: 'high', status: 'ignored' }],
+    ddl_tasks: [{ title: '提交方案', ddl_date: '2026-10-30', status: 'added' }],
+    questions: [{ question: '确认日期？', initial_guess: '下周五', confirmed_answer: '10月30日' }],
+  } }])
+  assert.deepEqual(views.tasks.map(item => item.kind), ['tasks', 'suggested_tasks', 'ddl_tasks'])
+  assert.deepEqual(views.tasks.map(item => item.status), ['accepted', 'ignored', 'added'])
+  assert.equal(views.tasks[1].priority, 'high')
+  assert.equal(views.tasks[2].dueDate, '2026-10-30')
+  assert.equal(views.questions[0].confirmedAnswer, '10月30日')
+  assert.equal(views.questions[0].recordId, 9)
+})
+
 test('分类保留来源和重复内容，不把空白、缺失来源或普通文本误认为截图', () => {
   const views = buildRecordViews([
     { ...detail(2), title: '需求单', result: { tasks: ['任务', ' ', '任务'], questions: ['确认颜色'], is_sample: true }, source_image: 'data:image/png;base64,test', source_transcript: '转录'.repeat(300) },
@@ -83,4 +98,13 @@ test('单份聊天地址保留记录和分类，非法记录编号不得成为�
     assert.deepEqual(routeFromHash(hash), { section: 'workspace', recordId: null })
   }
   assert.equal(hashForSection('workspace', 12), '#/')
+})
+
+test('客户与历史快照地址独立于聊天范围，刷新可恢复且拒绝非法编号', () => {
+  assert.deepEqual(routeFromHash(hashForSection('customers')), { section: 'customers', recordId: null, customerId: null, snapshotId: null })
+  assert.deepEqual(routeFromHash(hashForSection('customers', null, 8)), { section: 'customers', recordId: null, customerId: 8, snapshotId: null })
+  assert.deepEqual(routeFromHash(hashForSection('customers', null, 8, 12)), { section: 'customers', recordId: null, customerId: 8, snapshotId: 12 })
+  for (const hash of ['#/customers/0', '#/customers/-1', '#/customers/1/snapshots/0', '#/customers/9007199254740992', '#/customers/1/snapshots/9007199254740992']) {
+    assert.deepEqual(routeFromHash(hash), { section: 'workspace', recordId: null })
+  }
 })

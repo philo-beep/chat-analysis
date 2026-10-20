@@ -160,6 +160,13 @@ export function saveRecord(id, result) {
   })
 }
 
+// 所有采纳和确认操作由后端原子保存，避免重复创建日程或待办。
+export function actOnRecord(id, action) {
+  return authRequest(`/api/records/${id}/actions`, {
+    method: 'POST', body: JSON.stringify(action),
+  })
+}
+
 export function exportRecord(id) {
   return `${BASE_URL}/records/${id}/export`
 }
@@ -196,4 +203,21 @@ export function completeCalendarItem(id, completed) {
 
 export function importCalendarTask(body) {
   return authRequest('/api/calendar/items/from-record', { method: 'POST', body: JSON.stringify(body) })
+}
+
+// 客户页面沿用登录校验与统一业务返回体，不向聊天结果页附带画像。
+export function listCustomers({ q = '', limit = 24, offset = 0 } = {}) {
+  return authRequest(`/api/customers?${new URLSearchParams({ q, limit: String(limit), offset: String(offset) })}`)
+}
+
+export function getCustomer(id) {
+  return authRequest(`/api/customers/${id}`)
+}
+
+export function listCustomerSnapshots(id, { limit = 50, offset = 0 } = {}) {
+  return authRequest(`/api/customers/${id}/snapshots?${new URLSearchParams({ limit: String(limit), offset: String(offset) })}`)
+}
+
+export function getCustomerSnapshot(id, snapshotId) {
+  return authRequest(`/api/customers/${id}/snapshots/${snapshotId}`)
 }

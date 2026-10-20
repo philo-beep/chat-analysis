@@ -1,5 +1,7 @@
 # 接口约定（C 维护）
 
+> 2026-10-20 扩展：新分析保留 requirements/tasks/reply，questions 升级为对象，并新增 ddl_tasks/suggested_tasks；客户画像仅内部保存，不在公开响应中返回。新旧结果兼容、操作入口与完整 DTO 见 [扩展分析交付](expanded-ai-delivery.md)。下文原四字段示例仅用于旧记录契约。
+
 > 2026-10-19：所有 `/analyze`、`/records*` 请求现在必须带 `Authorization: Bearer <token>`，
 > 原业务响应形状保持兼容。新增 `/api/auth`、`/api/access-control`、`/api/admin` 和
 > `/api/usage` 的完整接口与权限表见 [访问控制说明](access-control.md)。

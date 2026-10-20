@@ -1,0 +1,262 @@
+{
+  "synthetic_data": true,
+  "quality_review_changed": false,
+  "stages": [
+    {
+      "name": "first",
+      "duration_seconds": 44.13,
+      "status": 200,
+      "response": {
+        "id": 1,
+        "requirements": [
+          {
+            "field": "关注事项",
+            "value": "交货时间",
+            "evidence": "我们关心交货时间"
+          },
+          {
+            "field": "审批要求",
+            "value": "方案要交主管批准",
+            "evidence": "方案要交主管批准"
+          },
+          {
+            "field": "沟通方式",
+            "value": "先用文字沟通",
+            "evidence": "先用文字沟通"
+          }
+        ],
+        "questions": [
+          {
+            "question": "客户期望何时交货，是否有必须满足的最晚交货日期？",
+            "initial_guess": "客户关注交货时间，但尚未提供具体日期。",
+            "related_ddl_index": null,
+            "status": "pending",
+            "confirmed_answer": null
+          },
+          {
+            "question": "本次采购的产品、规格和数量分别是什么？",
+            "initial_guess": "商家已表示先整理方案，但对话尚未说明采购产品、规格和数量。",
+            "related_ddl_index": null,
+            "status": "pending",
+            "confirmed_answer": null
+          },
+          {
+            "question": "主管审批需要方案包含哪些信息，预计何时审批？",
+            "initial_guess": "方案需交主管批准，具体审批要求及时间尚未说明。",
+            "related_ddl_index": null,
+            "status": "pending",
+            "confirmed_answer": null
+          }
+        ],
+        "tasks": [],
+        "reply": "陈晓明，您好，已收到，先用文字沟通。了解到您关注交货时间，方案需交主管批准。请问本次采购的产品、规格和数量是什么，期望何时交货？主管审批需要方案包含哪些信息，预计何时审批？",
+        "is_sample": false,
+        "analysis_version": 2,
+        "ddl_tasks": [],
+        "suggested_tasks": [
+          {
+            "title": "整理便于主管审批的文字方案，突出交货安排及待确认条件",
+            "reason": "客户关注交货时间，方案需交主管批准，商家已表示先整理方案。",
+            "priority": "high"
+          }
+        ],
+        "action_states": {}
+      },
+      "previous_profile_sent": [
+        null,
+        null
+      ],
+      "raw_model_responses": [
+        {
+          "company": "松禾商贸",
+          "company_quote": "客户：我是松禾商贸的陈晓明，负责采购。",
+          "display_name": "陈晓明",
+          "name_quote": "客户：我是松禾商贸的陈晓明，负责采购。"
+        },
+        {
+          "customer_profile": {
+            "communication_points": [
+              "先用文字沟通，便于客户查看和转交方案。",
+              "优先询问期望交货日期，明确客户对交货时间的要求。",
+              "围绕主管审批需要确认方案内容与审批标准。",
+              "陈晓明负责采购，沟通时区分采购对接与主管审批环节。"
+            ],
+            "communication_preferences": [
+              "先用文字沟通"
+            ],
+            "communication_strategy": "以文字对接采购负责人陈晓明，先明确交货时间和主管审批所需信息，再推进方案沟通。",
+            "company": "松禾商贸",
+            "concerns": [
+              "交货时间",
+              "方案需交主管批准"
+            ],
+            "decision_style": "负责采购，方案需交主管批准",
+            "display_name": "陈晓明",
+            "industry": "未知",
+            "next_follow_up": "通过文字询问采购内容、期望交货日期及主管审批要求。",
+            "risk_points": [
+              "期望交货日期尚未明确",
+              "采购内容与规模尚未明确",
+              "主管审批标准与时间尚未明确"
+            ],
+            "role": "采购负责人"
+          },
+          "ddl_tasks": [],
+          "questions": [
+            {
+              "initial_guess": "客户关注交货时间，但尚未提供期望交货日期。",
+              "question": "客户希望何时交货，是否有必须满足的最晚交货日期？",
+              "related_ddl_index": null
+            },
+            {
+              "initial_guess": "商家已表示先整理方案，但对话尚未说明采购品类、规格和数量。",
+              "question": "本次采购的产品、规格和数量分别是什么？",
+              "related_ddl_index": null
+            },
+            {
+              "initial_guess": "方案需由主管批准，具体审批标准及审批时间尚未说明。",
+              "question": "主管审批需要方案包含哪些信息，预计何时审批？",
+              "related_ddl_index": null
+            }
+          ],
+          "reply": "陈先生，收到，先用文字沟通。已了解您关注交货时间，方案需要交主管批准。请问本次采购的产品、规格和数量是什么，期望何时交货？主管审批需要方案包含哪些信息，预计何时审批？",
+          "requirements": [
+            {
+              "evidence": "我们关心交货时间",
+              "field": "关注事项",
+              "value": "交货时间"
+            },
+            {
+              "evidence": "方案要交主管批准",
+              "field": "审批要求",
+              "value": "方案要交主管批准"
+            },
+            {
+              "evidence": "先用文字沟通",
+              "field": "沟通方式",
+              "value": "先用文字沟通"
+            }
+          ],
+          "suggested_tasks": [
+            {
+              "priority": "high",
+              "reason": "客户关注交货时间，且方案需交主管批准；商家已表示先整理方案。",
+              "title": "整理便于主管审批的文字方案，突出交货安排及待确认条件"
+            }
+          ],
+          "tasks": []
+        },
+        {
+          "customer_profile": {
+            "communication_points": [
+              "先通过文字沟通，遵循客户已明确的沟通方式。",
+              "优先询问期望交货日期及最晚可接受日期。",
+              "补充确认采购产品、规格和数量，以便整理方案。",
+              "确认主管审批所需的方案内容及审批时间，区分采购对接与审批环节。"
+            ],
+            "communication_preferences": [
+              "先用文字沟通"
+            ],
+            "communication_strategy": "通过文字与负责采购的陈晓明对接，先确认采购内容、交货时间及主管审批要求，再推进方案沟通。",
+            "company": "松禾商贸",
+            "concerns": [
+              "交货时间",
+              "方案需交主管批准"
+            ],
+            "decision_style": "方案需交主管批准",
+            "display_name": "陈晓明",
+            "industry": "未知",
+            "next_follow_up": "通过文字询问采购产品、规格、数量、期望交货日期及主管审批要求。",
+            "risk_points": [
+              "期望交货日期尚未明确",
+              "采购产品、规格和数量尚未明确",
+              "主管审批要求及时间尚未明确"
+            ],
+            "role": "负责采购"
+          },
+          "ddl_tasks": [],
+          "questions": [
+            {
+              "initial_guess": "客户关注交货时间，但尚未提供具体日期。",
+              "question": "客户期望何时交货，是否有必须满足的最晚交货日期？",
+              "related_ddl_index": null
+            },
+            {
+              "initial_guess": "商家已表示先整理方案，但对话尚未说明采购产品、规格和数量。",
+              "question": "本次采购的产品、规格和数量分别是什么？",
+              "related_ddl_index": null
+            },
+            {
+              "initial_guess": "方案需交主管批准，具体审批要求及时间尚未说明。",
+              "question": "主管审批需要方案包含哪些信息，预计何时审批？",
+              "related_ddl_index": null
+            }
+          ],
+          "reply": "陈晓明，您好，已收到，先用文字沟通。了解到您关注交货时间，方案需交主管批准。请问本次采购的产品、规格和数量是什么，期望何时交货？主管审批需要方案包含哪些信息，预计何时审批？",
+          "requirements": [
+            {
+              "evidence": "我们关心交货时间",
+              "field": "关注事项",
+              "value": "交货时间"
+            },
+            {
+              "evidence": "方案要交主管批准",
+              "field": "审批要求",
+              "value": "方案要交主管批准"
+            },
+            {
+              "evidence": "先用文字沟通",
+              "field": "沟通方式",
+              "value": "先用文字沟通"
+            }
+          ],
+          "suggested_tasks": [
+            {
+              "priority": "high",
+              "reason": "客户关注交货时间，方案需交主管批准，商家已表示先整理方案。",
+              "title": "整理便于主管审批的文字方案，突出交货安排及待确认条件"
+            }
+          ],
+          "tasks": []
+        }
+      ],
+      "customers_total": 1,
+      "current": {
+        "id": 1,
+        "profile": {
+          "display_name": "陈晓明",
+          "role": "负责采购",
+          "company": "松禾商贸",
+          "industry": "未知",
+          "concerns": [
+            "交货时间",
+            "方案需交主管批准"
+          ],
+          "decision_style": "方案需交主管批准",
+          "communication_preferences": [
+            "先用文字沟通"
+          ],
+          "risk_points": [
+            "期望交货日期尚未明确",
+            "采购产品、规格和数量尚未明确",
+            "主管审批要求及时间尚未明确"
+          ],
+          "next_follow_up": "通过文字询问采购产品、规格、数量、期望交货日期及主管审批要求。",
+          "communication_strategy": "通过文字与负责采购的陈晓明对接，先确认采购内容、交货时间及主管审批要求，再推进方案沟通。",
+          "communication_points": [
+            "先通过文字沟通，遵循客户已明确的沟通方式。",
+            "优先询问期望交货日期及最晚可接受日期。",
+            "补充确认采购产品、规格和数量，以便整理方案。",
+            "确认主管审批所需的方案内容及审批时间，区分采购对接与审批环节。"
+          ]
+        },
+        "version": 1,
+        "created_at": "2026-10-20T06:38:19.085876+00:00",
+        "updated_at": "2026-10-20T06:38:19.085876+00:00",
+        "last_analyzed_at": "2026-10-20T06:38:19.085876+00:00",
+        "snapshot_count": 1
+      },
+      "snapshot_count": 1
+    }
+  ]
+}

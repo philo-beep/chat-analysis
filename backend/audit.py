@@ -26,6 +26,7 @@ def classify(path, method):
     if path == '/api/usage/visit': return 'visit'
     if path == '/api/usage/copy': return 'copy_client'
     if path in ('/analyze', '/api/analyze'): return 'analysis'
+    if re.fullmatch(r'/api/records/\d+/actions', path): return 'analysis_action'
     if re.fullmatch(r'/(api/)?records/\d+/export', path): return 'export'
     if re.fullmatch(r'/(api/)?records/\d+', path):
         return {'PUT': 'save', 'DELETE': 'record_delete'}.get(method, 'record_read')

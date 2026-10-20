@@ -80,9 +80,10 @@ def get_item(owner_id: int, item_id: int) -> dict:
 def _insert(conn, owner_id, values, *, source_record_id=None, source_task_key=None):
     timestamp = now().isoformat(timespec="seconds")
     cursor = conn.execute("""INSERT INTO task_items
-        (owner_id,title,notes,due_date,manual_level,created_at,updated_at,source_record_id,source_task_key)
-        VALUES(?,?,?,?,?,?,?,?,?)""",
+        (owner_id,title,notes,due_date,start_date,manual_level,created_at,updated_at,source_record_id,source_task_key)
+        VALUES(?,?,?,?,?,?,?,?,?,?)""",
         (owner_id, values["title"], values.get("notes", ""), values.get("due_date"),
+         values.get("start_date"),
          values.get("manual_level"), timestamp, timestamp, source_record_id, source_task_key))
     return serialize(_get(conn, owner_id, cursor.lastrowid))
 
@@ -100,6 +101,8 @@ def _task_due_date(text: str) -> str | None:
 
 def sync_record_tasks(conn, owner_id: int | None, record_id: int, result: dict) -> int:
     """Create one idempotently linked calendar task per valid saved suggestion."""
+    if isinstance(result, dict) and (result.get("analysis_version") == 2 or "ddl_tasks" in result or "suggested_tasks" in result):
+        return 0
     tasks = result.get("tasks") if isinstance(result, dict) else None
     if owner_id is None or not isinstance(tasks, list):
         return 0
@@ -150,6 +153,8 @@ def delete_owned_record_and_tasks(record_id: int, owner_id: int) -> dict | None:
                               (record_id, owner_id)).fetchone()[0]
         conn.execute("DELETE FROM task_items WHERE source_record_id=? AND owner_id=?",
                      (record_id, owner_id))
+        from profile_store import delete_record_snapshots
+        delete_record_snapshots(conn, record_id)
         conn.execute("DELETE FROM records WHERE id=? AND owner_id=?", (record_id, owner_id))
         return {"id": record_id, "deleted": True, "deleted_calendar_tasks": linked}
 

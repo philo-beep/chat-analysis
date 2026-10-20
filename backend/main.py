@@ -25,12 +25,16 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 import database
 import audit
+import profile_store
 from auth import permission
 from auth_routes import router as auth_router
 from access_routes import router as access_router
 from calendar_routes import router as calendar_router
+from customer_routes import router as customer_router
 from ai_service import analyze_chat
 from ai_contract import AnalysisOutcome
+from analysis_models import AIOutput, RecordResult, RequirementModel, SaveRequest, AnalysisAction
+from ai_service import ConfigurationError, ModelAPIError, InvalidModelOutput
 
 # 读 backend/.env（复制 .env.example 得到）。密钥只在本机，不进仓库。
 load_dotenv(Path(__file__).parent / ".env")
@@ -48,6 +52,7 @@ app = FastAPI(title="聊天分析 API", version="0.1.0", lifespan=lifespan)
 app.include_router(auth_router)
 app.include_router(access_router)
 app.include_router(calendar_router)
+app.include_router(customer_router)
 app.include_router(audit.routes())
 app.middleware('http')(audit.record_request)
 
@@ -124,28 +129,7 @@ class NormalizedChat(TypedDict):
     message_count: int
 
 
-class RequirementModel(BaseModel):
-    model_config = ConfigDict(strict=True, extra="forbid")
-
-    field: StrictStr = Field(min_length=1, pattern=r"\S")
-    value: StrictStr = Field(min_length=1, pattern=r"\S")
-    evidence: StrictStr = Field(min_length=1, pattern=r"\S")
-
-
-class ResultModel(BaseModel):
-    # 兼容前端将 /analyze 的整个响应（含 id）作为 result 回传。
-    # 未声明的展示元数据不写入数据库，四个业务字段必须完整提供。
-    model_config = ConfigDict(strict=True)
-
-    requirements: list[RequirementModel]
-    questions: list[StrictStr]
-    tasks: list[StrictStr]
-    reply: StrictStr
-    is_sample: StrictBool = False
-
-
-class SaveRequest(BaseModel):
-    result: ResultModel
+ResultModel = RecordResult
 
 
 @app.exception_handler(sqlite3.Error)
@@ -282,14 +266,14 @@ MAX_IMAGE_PIXELS = 25_000_000
 IMAGE_MIMES = {"PNG": "image/png", "JPEG": "image/jpeg", "WEBP": "image/webp"}
 
 
-def analyze_chat_with_source(text: str, image_bytes: bytes, image_mime: str) -> AnalysisOutcome:
+def analyze_chat_with_source(text: str, image_bytes: bytes, image_mime: str, *, profile_resolver=None) -> AnalysisOutcome:
     """D 的截图入口延迟导入，文本服务不依赖截图模型加载。"""
     import ai_service
 
     handler = getattr(ai_service, "analyze_chat_with_source", None)
     if handler is None:
         raise NotImplementedError("本地截图模型尚未接入")
-    return handler(text, image_bytes, image_mime)
+    return handler(text, image_bytes, image_mime, profile_resolver=profile_resolver)
 
 
 def validate_image(image_bytes: bytes, declared_mime: str | None) -> str:
@@ -326,11 +310,18 @@ def _analyze_and_save(
     owner_id: int | None = None,
 ) -> dict:
     source_transcript = ""
+    resolved = {}
+
+    def resolve_profile(identity):
+        context = profile_store.context_for_identity(owner_id, identity)
+        resolved['context'] = context
+        return context if context.get('profile') is not None else None
+
     try:
         if image_bytes is None:
-            raw_result = analyze_chat(model_text)
+            raw_result = analyze_chat(model_text, profile_resolver=resolve_profile)
         else:
-            outcome = analyze_chat_with_source(model_text, image_bytes, image_mime)
+            outcome = analyze_chat_with_source(model_text, image_bytes, image_mime, profile_resolver=resolve_profile)
             if not isinstance(outcome, AnalysisOutcome) or not isinstance(outcome.source_text, str):
                 raise ValueError("截图模型返回的内部结果不符合约定")
             source_transcript = outcome.source_text
@@ -340,6 +331,10 @@ def _analyze_and_save(
     except NotImplementedError:
         logger.exception("模型尚未接入")
         raise HTTPException(status_code=500, detail="真实模型调用尚未实现，请联系 D 完成接入") from None
+    except (ConfigurationError, ModelAPIError, InvalidModelOutput) as exc:
+        # These classes contain only curated, credential-free messages.
+        logger.warning("分析服务失败：%s", type(exc).__name__)
+        raise HTTPException(status_code=502, detail=str(exc)) from None
     except TimeoutError:
         logger.exception("模型调用超时")
         raise HTTPException(status_code=500, detail="模型调用超时，请稍后重试") from None
@@ -347,8 +342,19 @@ def _analyze_and_save(
         logger.exception("模型调用失败")
         raise HTTPException(status_code=500, detail="模型调用失败，请稍后重试；持续失败请联系 D") from None
 
+    profile = None
+    expanded = isinstance(raw_result, dict) and any(key in raw_result for key in ('customer_profile', 'ddl_tasks', 'suggested_tasks'))
     try:
-        validated = ResultModel.model_validate(raw_result)
+        if expanded:
+            model_output = AIOutput.model_validate({key: value for key, value in raw_result.items() if key != 'is_sample'})
+            values = model_output.model_dump()
+            profile = values.pop('customer_profile')
+            values.update(analysis_version=2, is_sample=False, action_states={})
+            values['questions'] = [{**question, 'status': 'pending', 'confirmed_answer': None}
+                                   for question in values['questions']]
+            validated = ResultModel.model_validate(values)
+        else:
+            validated = ResultModel.model_validate(raw_result)
     except ValidationError as exc:
         logger.warning("模型结果字段校验失败，共 %s 处错误", exc.error_count())
         raise HTTPException(status_code=500, detail="模型返回结果格式不符合接口约定，请联系 D 检查") from None
@@ -363,14 +369,22 @@ def _analyze_and_save(
         logger.warning("模型结果包含无法在原文中找到的引用")
         raise HTTPException(status_code=500, detail="模型返回的原文引用无效，请联系 D 检查")
 
-    result = validated.model_dump()
+    result = validated.model_dump(exclude_unset=True)
+    result.setdefault('is_sample', False)
+    if expanded and any(task['source_quote'] not in source_text for task in result['ddl_tasks']):
+        raise HTTPException(status_code=502, detail='任务来源无法在原文中找到，请重试')
     source_image = None
     if image_bytes is not None:
         source_image = f"data:{image_mime};base64," + base64.b64encode(image_bytes).decode("ascii")
-    record_id = database.save_record(
-        source_text, result, source_input=source_input,
-        source_image=source_image, source_transcript=source_transcript, owner_id=owner_id,
-    )
+    try:
+        record_id = database.save_record(
+            source_text, result, source_input=source_input,
+            source_image=source_image, source_transcript=source_transcript, owner_id=owner_id,
+            customer_profile=profile,
+            **({'profile_context': resolved['context']} if 'context' in resolved else {}),
+        )
+    except profile_store.ProfileConflictError:
+        raise HTTPException(status_code=409, detail='这位客户刚有新的整理结果，本次尚未保存，请重新整理以合并最新资料') from None
     return {"id": record_id, **result}
 
 
@@ -388,7 +402,7 @@ def _analyze_and_save(
     }},
 })
 async def analyze(request: Request, user=Depends(permission('analysis:run'))) -> dict:
-    """JSON text/messages 或 multipart text/image；响应六字段保持不变。"""
+    """Keep original inputs; expanded results never expose the customer profile."""
     size = 0
     chunks = []
     async for chunk in request.stream():
@@ -467,14 +481,31 @@ def update_record(record_id: int, payload: SaveRequest, user=Depends(permission(
     record = database.get_record(record_id, **_scope(user))
     if record is None:
         raise HTTPException(status_code=404, detail="记录不存在")
-    result = payload.result.model_dump(exclude={"is_sample"})
+    result = payload.result.model_dump(exclude={"is_sample"}, exclude_unset=True)
     # 来源标记由分析时确定，编辑请求不能把开发样例改成真实模型结果。
     # 对没有来源标记的旧记录保留缺失状态，不擅自判断其来源。
     if "is_sample" in record["result"]:
         result["is_sample"] = record["result"]["is_sample"]
-    if not database.update_result(record_id, result, **_scope(user)):
-        raise HTTPException(status_code=404, detail="记录不存在")
+    import calendar_store
+    try:
+        if not database.update_result(record_id, result, **_scope(user)):
+            raise HTTPException(status_code=404, detail="记录不存在")
+    except calendar_store.CalendarError as exc:
+        raise HTTPException(exc.status, exc.message) from None
     return {"ok": True}
+
+
+@app.post('/api/records/{record_id}/actions')
+def analysis_action(record_id: int, payload: AnalysisAction,
+                    user=Depends(permission('records:write')),
+                    _reader=Depends(permission('records:read'))):
+    from record_actions import apply_action
+    import calendar_store
+    try:
+        result = apply_action(user, record_id, payload.model_dump())
+    except calendar_store.CalendarError as exc:
+        raise HTTPException(exc.status, exc.message) from None
+    return {'code': 0, 'message': '操作已保存', 'data': result}
 
 
 @app.get("/records/{record_id}/export")

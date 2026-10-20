@@ -35,9 +35,9 @@ defineEmits(['select', 'refresh', 'import'])
         <li v-for="item in items" :key="item.key">
           <button class="item" :disabled="disabled" @click="$emit('select', { id: item.recordId })">
             <img v-if="item.image" :src="item.image" alt="原始聊天截图缩略图" loading="lazy" />
-            <span class="item-body"><span class="text">{{ item.text }}</span><span v-if="item.isSample" class="sample">开发样例</span><span class="source">来源：{{ item.title }} · #{{ item.recordId }}</span><span class="time"><AppIcon name="clock" :size="11" />{{ item.createdAt }} · 打开来源记录</span></span>
+            <span class="item-body"><span class="text">{{ item.text }}</span><span v-if="item.reason" class="source">建议理由：{{ item.reason }}</span><span v-if="item.dueDate" class="source">截止日期：{{ item.dueDate }}</span><span v-if="item.initialGuess || item.confirmedAnswer" class="source">{{ item.confirmedAnswer ? `已确认：${item.confirmedAnswer}` : `初步判断：${item.initialGuess}` }}</span><span v-if="item.isSample" class="sample">开发样例</span><span class="source">来源：{{ item.title }} · #{{ item.recordId }}</span><span class="time"><AppIcon name="clock" :size="11" />{{ item.createdAt }} · 打开来源记录</span></span>
           </button>
-          <button v-if="allowImport" class="import-task ghost" :disabled="disabled || loading" @click="$emit('import', item)">加入待办池</button>
+          <button v-if="allowImport" class="import-task ghost" :disabled="disabled || loading || item.status === 'added' || item.status === 'accepted'" @click="$emit('import', item)">{{ item.status === 'added' || item.status === 'accepted' ? '已加入日程计划' : item.kind === 'ddl_tasks' ? '加入日历' : '加入待办池' }}</button>
         </li>
       </ul>
     </template>

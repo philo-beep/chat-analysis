@@ -11,6 +11,7 @@ sys.path.insert(0, str(BACKEND))
 
 import ai_service
 from ai_contract import AnalysisOutcome
+from expanded_fixture import output as expanded_output
 
 
 class SettingsTests(unittest.TestCase):
@@ -114,6 +115,10 @@ class ContractTests(unittest.TestCase):
     def test_quality_review_receives_original_source_and_candidate(self):
         text = '甲方：大概100件。'
         draft = {'requirements': [{'field': '数量', 'value': '100件', 'evidence': '大概100件'}], 'questions': [], 'tasks': [], 'reply': ''}
+        expanded = expanded_output()
+        expanded.update(draft)
+        expanded.update(ddl_tasks=[], suggested_tasks=[], customer_profile={**expanded['customer_profile'], 'display_name': '未知', 'company': '未知'})
+        draft = expanded
         reviewed = {**draft, 'requirements': [{'field': '数量', 'value': '大概100件', 'evidence': '大概100件'}]}
         client = ai_service.ChatCompletionsClient(ai_service.Settings('test-key', quality_review=True))
         with patch.object(client, 'complete', side_effect=[json.dumps(draft), json.dumps(reviewed)]) as complete:
@@ -128,6 +133,10 @@ class ContractTests(unittest.TestCase):
         Image.new('RGB', (2, 2), 'white').save(image_data, format='PNG')
         transcript = '甲方：数量改成150件。'
         result = {'requirements': [{'field': '数量', 'value': '150件', 'evidence': '数量改成150件'}], 'questions': [], 'tasks': [], 'reply': ''}
+        expanded = expanded_output()
+        expanded.update(result)
+        expanded.update(ddl_tasks=[], suggested_tasks=[], customer_profile={**expanded['customer_profile'], 'display_name': '未知', 'company': '未知'})
+        result = expanded
         client = ai_service.ChatCompletionsClient(ai_service.Settings('test-key', quality_review=False))
         with patch.object(ai_service, 'load_settings', return_value=client.settings), patch.object(
             client, 'complete', side_effect=[json.dumps({'transcript': transcript}), json.dumps(result)]

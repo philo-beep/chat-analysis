@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1320" viewBox="0 0 900 1320">
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="5" stdDeviation="12" flood-color="#24312a" flood-opacity=".11"/>
+    </filter>
+  </defs>
+  <rect width="900" height="1320" fill="#edf0e9"/>
+  <rect x="82" y="42" width="736" height="1236" rx="30" fill="#fffefa" filter="url(#shadow)"/>
+  <path d="M112 42h676a30 30 0 0 1 30 30v142H82V72a30 30 0 0 1 30-30Z" fill="#315347"/>
+  <text x="126" y="82" fill="#f8f8f1" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="16" opacity=".8">09:41</text>
+  <text x="774" y="82" text-anchor="end" fill="#f8f8f1" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="16" opacity=".8">● ● ●  5G  92%</text>
+  <text x="122" y="144" fill="#fffefa" font-family="Arial,'Microsoft YaHei',sans-serif" font-size="27">‹</text>
+  <circle cx="178" cy="137" r="29" fill="#d7e2d2"/>
+  <text x="178" y="146" text-anchor="middle" fill="#315347" font-family="'Microsoft YaHei',sans-serif" font-size="21" font-weight="700">云</text>
+  <text x="224" y="132" fill="#fffefa" font-family="'Microsoft YaHei',sans-serif" font-size="22" font-weight="700">云杉文化衫项目</text>
+  <text x="224" y="161" fill="#dce7df" font-family="'Microsoft YaHei',sans-serif" font-size="15">客户沟通 · 演示样例</text>
+  <text x="774" y="146" text-anchor="end" fill="#fffefa" font-family="Arial,sans-serif" font-size="25">•••</text>
+  <rect x="82" y="214" width="736" height="42" fill="#f7f7f1"/>
+  <text x="450" y="241" text-anchor="middle" fill="#6c786e" font-family="'Microsoft YaHei',sans-serif" font-size="15">周一  10月19日</text>
+  <rect x="355" y="273" width="190" height="30" rx="15" fill="#e8ece5"/>
+  <text x="450" y="294" text-anchor="middle" fill="#68746a" font-family="'Microsoft YaHei',sans-serif" font-size="13">仅供产品演示</text>
+
+  <circle cx="137" cy="348" r="22" fill="#e6d8c7"/><text x="137" y="355" text-anchor="middle" fill="#6d5540" font-family="'Microsoft YaHei',sans-serif" font-size="15" font-weight="700">客</text>
+  <text x="174" y="340" fill="#748075" font-family="'Microsoft YaHei',sans-serif" font-size="14">客户  09:18</text>
+  <rect x="174" y="350" width="438" height="76" rx="17" fill="#f2f3ed"/>
+  <text x="196" y="380" fill="#28352d" font-family="'Microsoft YaHei',sans-serif" font-size="18">你好，我们公司活动想定一批文化衫，</text>
+  <text x="196" y="407" fill="#28352d" font-family="'Microsoft YaHei',sans-serif" font-size="18">先了解下大概方案和价格。</text>
+
+  <circle cx="763" cy="462" r="22" fill="#d8e5d7"/><text x="763" y="469" text-anchor="middle" fill="#315347" font-family="'Microsoft YaHei',sans-serif" font-size="15" font-weight="700">商</text>
+  <text x="726" y="454" text-anchor="end" fill="#748075" font-family="'Microsoft YaHei',sans-serif" font-size="14">商家  09:20</text>
+  <rect x="330" y="464" width="374" height="52" rx="17" fill="#dcebd5"/>
+  <text x="352" y="497" fill="#28352d" font-family="'Microsoft YaHei',sans-serif" font-size="18">收到，预计做多少件、什么时候用？</text>
+
+  <circle cx="137" cy="551" r="22" fill="#e6d8c7"/><text x="137" y="558" text-anchor="middle" fill="#6d5540" font-family="'Microsoft YaHei',sans-serif" font-size="15" font-weight="700">客</text>
+  <text x="174" y="543" fill="#748075" font-family="'Microsoft YaHei',sans-serif" font-size="14">客户  09:22</text>
+  <rect x="174" y="553" width="380" height="52" rx="17" fill="#f2f3ed"/>
+  <text x="196" y="586" fill="#28352d" font-family="'Microsoft YaHei',sans-serif" font-size="18">最开始估计100件，预算三四千。</text>
+
+  <circle cx="763" cy="642" r="22" fill="#d8e5d7"/><text x="763" y="649" text-anchor="middle" fill="#315347" font-family="'Microsoft YaHei',sans-serif" font-size="15" font-weight="700">商</text>
+  <text x="726" y="634" text-anchor="end" fill="#748075" font-family="'Microsoft YaHei',sans-serif" font-size="14">商家  09:24</text>
+  <rect x="398" y="644" width="306" height="52" rx="17" fill="#dcebd5"/>
+  <text x="420" y="677" fill="#28352d" font-family="'Microsoft YaHei',sans-serif" font-size="18">我先按纯棉和速干各做一版。</text>
+
+  <circle cx="137" cy="733" r="22" fill="#e6d8c7"/><text x="137" y="740" text-anchor="middle" fill="#6d5540" font-family="'Microsoft YaHei',sans-serif" font-size="15" font-weight="700">客</text>
+  <text x="174" y="725" fill="#748075" font-family="'Microsoft YaHei',sans-serif" font-size="14">客户  09:27</text>
+  <rect x="174" y="735" width="492" height="76" rx="17" fill="#f2f3ed"/>
+  <text x="196" y="765" fill="#28352d" font-family="'Microsoft YaHei',sans-serif" font-size="18">人数刚确认了，要改成150件。预算上限</text>
+  <text x="196" y="792" fill="#28352d" font-family="'Microsoft YaHei',sans-serif" font-size="18">6000元，具体报价还要内部审批。</text>
+
+  <circle cx="763" cy="847" r="22" fill="#d8e5d7"/><text x="763" y="854" text-anchor="middle" fill="#315347" font-family="'Microsoft YaHei',sans-serif" font-size="15" font-weight="700">商</text>
+  <text x="726" y="839" text-anchor="end" fill="#748075" font-family="'Microsoft YaHei',sans-serif" font-size="14">商家  09:30</text>
+  <rect x="337" y="849" width="367" height="76" rx="17" fill="#dcebd5"/>
+  <text x="359" y="879" fill="#28352d" font-family="'Microsoft YaHei',sans-serif" font-size="18">明天下午前给你分项报价和效果图，</text>
+  <text x="359" y="906" fill="#28352d" font-family="'Microsoft YaHei',sans-serif" font-size="18">需要先收到标识文件才能排版。</text>
+
+  <circle cx="137" cy="967" r="22" fill="#e6d8c7"/><text x="137" y="974" text-anchor="middle" fill="#6d5540" font-family="'Microsoft YaHei',sans-serif" font-size="15" font-weight="700">客</text>
+  <text x="174" y="959" fill="#748075" font-family="'Microsoft YaHei',sans-serif" font-size="14">客户  09:34</text>
+  <rect x="174" y="969" width="490" height="76" rx="17" fill="#f2f3ed"/>
+  <text x="196" y="999" fill="#28352d" font-family="'Microsoft YaHei',sans-serif" font-size="18">收货要在11月20日前，颜色和尺码表</text>
+  <text x="196" y="1026" fill="#28352d" font-family="'Microsoft YaHei',sans-serif" font-size="18">我们还在确认，稍后把标识发你。</text>
+
+  <circle cx="763" cy="1081" r="22" fill="#d8e5d7"/><text x="763" y="1088" text-anchor="middle" fill="#315347" font-family="'Microsoft YaHei',sans-serif" font-size="15" font-weight="700">商</text>
+  <text x="726" y="1073" text-anchor="end" fill="#748075" font-family="'Microsoft YaHei',sans-serif" font-size="14">商家  09:36</text>
+  <rect x="339" y="1083" width="365" height="76" rx="17" fill="#dcebd5"/>
+  <text x="361" y="1113" fill="#28352d" font-family="'Microsoft YaHei',sans-serif" font-size="18">好的，先核实生产和物流时间。</text>
+  <text x="361" y="1140" fill="#28352d" font-family="'Microsoft YaHei',sans-serif" font-size="18">颜色、尺码和标识收到后再确认。</text>
+
+  <rect x="112" y="1194" width="676" height="56" rx="17" fill="#f7f7f1" stroke="#e2e5dd"/>
+  <circle cx="151" cy="1222" r="15" fill="none" stroke="#829080" stroke-width="2"/>
+  <path d="M151 1213v18M142 1222h18" stroke="#829080" stroke-width="2"/>
+  <text x="184" y="1228" fill="#9aa398" font-family="'Microsoft YaHei',sans-serif" font-size="16">输入消息…</text>
+  <text x="746" y="1229" text-anchor="end" fill="#829080" font-family="Arial,sans-serif" font-size="21">☺  ◉</text>
+</svg>

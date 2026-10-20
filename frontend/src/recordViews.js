@@ -8,12 +8,21 @@ export function buildRecordViews(records) {
       createdAt: record.created_at,
       isSample: record.result?.is_sample === true,
     }
-    for (const kind of ['tasks', 'questions']) {
-      const values = record.result?.[kind]
+    const result = record.result || {}
+    for (const kind of ['tasks', 'suggested_tasks', 'ddl_tasks', 'questions']) {
+      const values = result[kind]
       if (!Array.isArray(values)) continue
       values.forEach((value, index) => {
-        if (typeof value !== 'string' || !value.trim()) return
-        views[kind].push({ ...source, key: `${record.id}:${kind}:${index}`, text: value, taskIndex: index })
+        const text = typeof value === 'string' ? value : kind === 'questions' ? value?.question : value?.title
+        if (typeof text !== 'string' || !text.trim()) return
+        const detail = typeof value === 'object' ? value : {}
+        const state = kind === 'tasks' ? result.action_states?.[String(index)] : detail
+        views[kind === 'questions' ? 'questions' : 'tasks'].push({
+          ...source, key: `${record.id}:${kind}:${index}`, text, taskIndex: index,
+          kind, status: state?.status, reason: detail.reason, priority: detail.priority,
+          dueDate: detail.ddl_date, initialGuess: detail.initial_guess, confirmedAnswer: detail.confirmed_answer,
+          expanded: result.analysis_version === 2 || Array.isArray(result.ddl_tasks) || Array.isArray(result.suggested_tasks),
+        })
       })
     }
     if (typeof record.source_image === 'string' && record.source_image.trim()) {

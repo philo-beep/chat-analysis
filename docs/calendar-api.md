@@ -1,5 +1,7 @@
 # 日程计划 API
 
+2026-10-20 扩展：下文自动同步 `tasks` 的说明仅适用于旧记录。新分析包含 `ddl_tasks / suggested_tasks`，普通及推进建议需显式采纳，日期任务需点击加入日历，复用同一任务表。模型可提供 `start_date`，导入时后端可信写入；浏览器仍不能直接提交开始日。具体结构、日期推算和验收限制见 [扩展分析交付](expanded-ai-delivery.md)。日历自身的颜色、完成、甘特及帮助规则未改变。
+
 沿用 FastAPI、SQLite 与 Bearer token。所有响应为 `{code,message,data}`，成功 `code=0`；失败使用 HTTP 状态码和同值 `code`，`data=null`。读取需 `records:read`，修改需 `records:write`；来源导入两者都需具备。日程始终按当前用户隔离，管理员也不能直接读写他人日程。
 
 ## 数据与日期

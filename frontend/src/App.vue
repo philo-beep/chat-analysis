@@ -12,9 +12,11 @@ import TaskList from './components/TaskList.vue'
 import QuestionList from './components/QuestionList.vue'
 import ScreenshotList from './components/ScreenshotList.vue'
 import CalendarPanel from './components/CalendarPanel.vue'
+import CustomerList from './components/CustomerList.vue'
+import CustomerDetail from './components/CustomerDetail.vue'
 import { directorySections, hashForSection, routeFromHash, sectionFromHash } from './navigation.js'
 import { buildRecordViews, loadRecordDetails } from './recordViews.js'
-import { analyze, getRecord, listRecords, deleteRecord, getCurrentUser, logout, trackPageView, importCalendarTask } from './api.js'
+import { actOnRecord, analyze, getRecord, listRecords, deleteRecord, getCurrentUser, logout, trackPageView, importCalendarTask } from './api.js'
 import { currentUser, sessionVersion, getAuthToken, establishSession, restoreSessionUser, clearSession } from './auth.js'
 
 const inputArea = ref(null)
@@ -43,6 +45,8 @@ const restoreFailed = ref(false)
 const loggingOut = ref(false)
 const section = ref(sectionFromHash(window.location.hash))
 const directoryRecordId = ref(routeFromHash(window.location.hash).recordId)
+const customerId = ref(routeFromHash(window.location.hash).customerId || null)
+const customerSnapshotId = ref(routeFromHash(window.location.hash).snapshotId || null)
 const scopeMode = ref(directoryRecordId.value || section.value === 'workspace' ? 'current' : 'all')
 const scopedRecord = ref(null)
 const scopedLoading = ref(false)
@@ -51,7 +55,7 @@ let scopedEpoch = 0
 const canViewAdmin = computed(() => currentUser.value?.permissions?.includes('admin:stats'))
 const canWrite = computed(() => currentUser.value?.permissions?.includes('records:write') === true)
 const isCalendar = computed(() => section.value === 'calendar' || section.value === 'calendar/gantt')
-const sectionTitle = computed(() => directorySections.find((item) => item.key === section.value)?.label || (isCalendar.value ? '日程计划' : section.value === 'admin' ? '网站后台统计' : '需求工作台'))
+const sectionTitle = computed(() => directorySections.find((item) => item.key === section.value)?.label || (isCalendar.value ? '日程计划' : section.value === 'customers' ? '我的客户' : section.value === 'admin' ? '网站后台统计' : '需求工作台'))
 const calendarImportMessage = ref('')
 const calendarImportError = ref('')
 const directoryComponent = computed(() => ({ tasks: TaskList, questions: QuestionList, screenshots: ScreenshotList })[section.value])
@@ -86,18 +90,20 @@ const directoryCounts = computed(() => {
   return Object.fromEntries(Object.entries(views).map(([key, items]) => [key, items.length]))
 })
 
-function navigate(next, targetId = null) {
+function navigate(next, targetId = null, targetCustomerId = null, targetSnapshotId = null) {
   if (loading.value || panelBusy.value) return
-  const route = routeFromHash(hashForSection(next, targetId), canViewAdmin.value)
+  const route = routeFromHash(hashForSection(next, targetId, targetCustomerId, targetSnapshotId), canViewAdmin.value)
   section.value = route.section
   directoryRecordId.value = route.recordId
+  customerId.value = route.customerId || null
+  customerSnapshotId.value = route.snapshotId || null
   scopeMode.value = route.recordId || route.section === 'workspace' ? 'current' : 'all'
-  const hash = hashForSection(section.value, directoryRecordId.value)
+  const hash = hashForSection(section.value, directoryRecordId.value, customerId.value, customerSnapshotId.value)
   if (window.location.hash !== hash) window.location.hash = hash
 }
 
 function navigateDirectory(next) {
-  if (next === 'calendar' || next === 'workspace') return navigate(next)
+  if (next === 'calendar' || next === 'workspace' || next === 'customers') return navigate(next)
   if (scopeMode.value === 'current' && !shortcutRecordId.value) return
   navigate(next, scopeMode.value === 'current' ? shortcutRecordId.value : null)
 }
@@ -109,7 +115,25 @@ async function addSuggestionToCalendar(item) {
   calendarImportMessage.value = ''
   calendarImportError.value = ''
   try {
-    const task = await importCalendarTask({ record_id: item.recordId, task_index: item.taskIndex, expected_text: item.text })
+    let task
+    if (item.kind === 'suggested_tasks' || item.kind === 'ddl_tasks' || item.expanded) {
+      const source = await getRecord(item.recordId)
+      if (!isCurrent(version)) return
+      const action = await actOnRecord(item.recordId, {
+        action: item.kind === 'ddl_tasks' ? 'add_ddl_task' : 'accept_suggestion',
+        ...(item.kind !== 'ddl_tasks' ? { kind: item.kind || 'tasks' } : {}),
+        index: item.taskIndex, expected_result: source.result,
+      })
+      task = action.item
+      const record = await getRecord(item.recordId)
+      if (!isCurrent(version)) return
+      directoryCache.set(record.id, { updatedAt: record.updated_at, record })
+      directoryRecords.value = directoryRecords.value.map((entry) => entry.id === record.id ? record : entry)
+      if (scopedRecord.value?.id === record.id) scopedRecord.value = record
+      if (recordId.value === record.id) showRecord(record)
+    } else {
+      task = await importCalendarTask({ record_id: item.recordId, task_index: item.taskIndex, expected_text: item.text })
+    }
     if (isCurrent(version)) calendarImportMessage.value = task.completed
       ? `「${task.title}」已存在于日程计划的已完成列表，可在那里重新打开。`
       : task.due_date ? `「${task.title}」已排期，可在日程计划查看；重复点击不会重复创建。`
@@ -174,12 +198,14 @@ function openHistoryShortcut({ id, section: next }) {
 
 function syncNavigation() {
   if (loading.value || panelBusy.value) {
-    window.history.replaceState(null, '', hashForSection(section.value, directoryRecordId.value))
+    window.history.replaceState(null, '', hashForSection(section.value, directoryRecordId.value, customerId.value, customerSnapshotId.value))
     return
   }
   const route = routeFromHash(window.location.hash, canViewAdmin.value)
   section.value = route.section
   directoryRecordId.value = route.recordId
+  customerId.value = route.customerId || null
+  customerSnapshotId.value = route.snapshotId || null
   scopeMode.value = route.recordId || route.section === 'workspace' ? 'current' : 'all'
 }
 window.addEventListener('hashchange', syncNavigation)
@@ -403,6 +429,8 @@ function resetWorkspace() {
   panelBusy.value = false
   section.value = currentUser.value ? sectionFromHash(window.location.hash, canViewAdmin.value) : 'workspace'
   directoryRecordId.value = currentUser.value ? routeFromHash(window.location.hash, canViewAdmin.value).recordId : null
+  customerId.value = currentUser.value ? routeFromHash(window.location.hash, canViewAdmin.value).customerId || null : null
+  customerSnapshotId.value = currentUser.value ? routeFromHash(window.location.hash, canViewAdmin.value).snapshotId || null : null
   scopeMode.value = directoryRecordId.value || section.value === 'workspace' ? 'current' : 'all'
 }
 
@@ -507,6 +535,10 @@ restoreLogin()
       <header class="topbar"><span>工作空间 <span class="breadcrumb-divider">/</span> <strong>{{ sectionTitle }}</strong></span><div class="session-tools"><span class="user-name">{{ currentUser.username }}</span><span class="avatar" aria-hidden="true">{{ currentUser.username.slice(0, 1) }}</span><button v-if="canViewAdmin" type="button" :disabled="loading || panelBusy" @click="navigate(section === 'admin' ? 'workspace' : 'admin')">{{ section === 'admin' ? '返回工作台' : '后台统计' }}</button><button type="button" :disabled="loggingOut" @click="handleLogout">{{ loggingOut ? '退出中…' : '退出登录' }}</button></div></header>
       <div v-if="section === 'admin' && canViewAdmin" class="workspace"><AdminPanel /></div>
       <div v-if="isCalendar" class="workspace"><CalendarPanel ref="calendarPanel" :key="sessionVersion" :view="section === 'calendar/gantt' ? 'gantt' : 'calendar'" :disabled="!canWrite" @navigate="navigate" @busy="handlePanelBusy" /></div>
+      <div v-if="section === 'customers'" class="workspace">
+        <CustomerDetail v-if="customerId" :key="`${sessionVersion}:${customerId}`" :customer-id="customerId" :snapshot-id="customerSnapshotId" @back="navigate('customers')" @latest="navigate('customers', null, customerId)" @snapshot="(id) => navigate('customers', null, customerId, id)" />
+        <CustomerList v-else :key="sessionVersion" @select="(id) => navigate('customers', null, id)" />
+      </div>
       <div v-if="directoryComponent" class="workspace">
         <p v-if="section === 'tasks' && calendarImportMessage" role="status">{{ calendarImportMessage }}</p>
         <p v-if="section === 'tasks' && calendarImportError" class="error" role="alert">{{ calendarImportError }}</p>

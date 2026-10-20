@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Iterator
 
 DB_PATH = Path(__file__).parent / "app.db"
+_NO_PROFILE_CONTEXT = object()
 
 
 class RecordDataError(Exception):
@@ -62,6 +63,8 @@ def init_db() -> None:
         conn.execute("CREATE INDEX IF NOT EXISTS idx_records_owner ON records(owner_id, id DESC)")
         from calendar_store import init_schema as init_calendar_schema
         init_calendar_schema(conn)
+        from profile_store import init_schema as init_profile_schema
+        init_profile_schema(conn)
         marker = conn.execute("SELECT 1 FROM calendar_migrations WHERE code='record-task-backfill-v1'").fetchone()
         if marker is None:
             from calendar_store import sync_existing_record_tasks
@@ -74,10 +77,18 @@ def save_record(
     text: str, result: dict, *, source_input: dict | None = None,
     source_image: str | None = None, source_transcript: str = "",
     owner_id: int | None = None,
+    customer_profile: dict | None = None,
+    profile_context=_NO_PROFILE_CONTEXT,
 ) -> int:
     now = datetime.now().isoformat(timespec="seconds")
     title = text.strip().splitlines()[0][:30] if text.strip() else "未命名"
+    # Private profiles must never enter records.result or the public export path.
+    result = dict(result)
+    embedded_profile = result.pop("customer_profile", None)
+    if customer_profile is None:
+        customer_profile = embedded_profile
     with _connect() as conn:
+        conn.execute("BEGIN IMMEDIATE")
         cur = conn.execute(
             "INSERT INTO records (title, text, result, created_at, updated_at,"
             " source_input, source_image, source_transcript, owner_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -88,6 +99,11 @@ def save_record(
         record_id = int(cur.lastrowid)
         from calendar_store import sync_record_tasks
         sync_record_tasks(conn, owner_id, record_id, result)
+        from profile_store import save_snapshot
+        if profile_context is _NO_PROFILE_CONTEXT:
+            save_snapshot(conn, owner_id, record_id, customer_profile)
+        else:
+            save_snapshot(conn, owner_id, record_id, customer_profile, profile_context=profile_context)
         return record_id
 
 
@@ -131,6 +147,7 @@ def get_record(record_id: int, *, owner_id: int | None = None, include_all: bool
         raise RecordDataError(f"记录 {record_id} 的结果无法解析") from exc
     if not isinstance(result, dict):
         raise RecordDataError(f"记录 {record_id} 的结果不是 JSON 对象")
+    result.pop('customer_profile', None)
     record["result"] = result
     if record["source_input"] is not None:
         try:
@@ -145,6 +162,14 @@ def get_record(record_id: int, *, owner_id: int | None = None, include_all: bool
 def update_result(record_id: int, result: dict, *, owner_id: int | None = None, include_all: bool = True) -> bool:
     now = datetime.now().isoformat(timespec="seconds")
     with _connect() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        existing = conn.execute("SELECT result FROM records WHERE id=?" + ("" if include_all else " AND owner_id=?"),
+                                (record_id,) if include_all else (record_id, owner_id)).fetchone()
+        if existing is None:
+            return False
+        from record_actions import preserve_action_states
+        result = preserve_action_states(json.loads(existing["result"]), result)
+        result.pop("customer_profile", None)
         cur = conn.execute(
             "UPDATE records SET result = ?, updated_at = ? WHERE id = ?"
             + ("" if include_all else " AND owner_id = ?"),

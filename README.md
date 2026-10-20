@@ -2,7 +2,11 @@
 
 输入一段聊天原文，输出结构化结果：**需求**、**待确认问题**、**建议待办**、**回复草稿**。
 
-当前版本包含登录注册与权限校验、文本/截图聊天分析、历史记录与内容目录、原文折叠、编辑导出、个人日历/待办池/甘特图，以及聊天删除与关联日历任务联动。完整运行需要后端与前端同时启动，并配置有调用权限的云端 AI Key。
+2026-10-20 扩展分析：保留上述功能，增加有截止日期的任务、带理由和优先级的推进建议；推进建议与普通建议合并显示。新记录需点击“采纳”进入待办池、“加入日历”建立排期；旧记录原有同步行为保留。问题支持初步判断与人工确认。聊天分析响应和导出不返回客户画像，客户资料通过下述专用页面查看。详见 [扩展交付与实际验收](docs/expanded-ai-delivery.md)，包括真实长对话尚未通过的限制。
+
+“我的客户”新增客户搜索、沟通指导和画像历史回看。分析时会识别客户并带入该账号下已有画像，保留旧信息、吸收新信息；明确姓名和公司一致的客户自动归并，称呼不明确时独立保存，避免误认。旧画像不批量补写沟通建议。聊天分析结果和导出仍不包含画像，画像仅通过当前账号的专用客户页面读取。详见 [客户画像交付与验收](docs/customers-delivery.md)；连续真实云端更新因耗时上限尚待复验。
+
+当前版本包含登录注册与权限校验、文本/截图聊天分析、历史记录与内容目录、原文折叠、编辑导出、个人日历/待办池/甘特图、我的客户，以及聊天删除与关联日历任务联动。完整运行需要后端与前端同时启动，并配置有调用权限的云端 AI Key。
 
 GitHub 默认 `main` 分支为完整交付版本。运行代码已在仓库中，不需要原始压缩包或桌面模型目录；用户数据和凭据需要在新机器上重新建立。
 
@@ -119,7 +123,7 @@ python -m venv .venv-c
 backend/.venv/Scripts/python.exe -B backend/tests/check_acceptance.py --images --output "$env:TEMP/keyoushu-acceptance.json"
 ```
 
-前端验证在 `frontend` 目录执行 `npm test`、`npm run build`。浏览器验收执行 `npm run test:browser`，三组测试（日历、侧栏、欢迎与登录）顺序运行，使用临时数据库及端口 18000/15173，不调用云端 AI。Windows 默认使用已安装的 Edge；无 Edge 时先执行 `npx playwright install chromium` 下载测试浏览器。可用 `EDGE_EXECUTABLE` 指定浏览器路径、`PYTHON_EXECUTABLE` 指定后端 Python；不需要本机 Codex 工具目录。
+前端验证在 `frontend` 目录执行 `npm test`、`npm run build`。浏览器验收执行 `npm run test:browser`，五组测试（日历、侧栏、欢迎与登录、扩展分析操作、我的客户）顺序运行，使用临时数据库及端口 18000/15173，不调用云端 AI。Windows 默认使用已安装的 Edge；无 Edge 时先执行 `npx playwright install chromium` 下载测试浏览器。可用 `EDGE_EXECUTABLE` 指定浏览器路径、`PYTHON_EXECUTABLE` 指定后端 Python；不需要本机 Codex 工具目录。本机若复用项目外的 Playwright 工具，可设置 `PLAYWRIGHT_NODE_MODULES`，否则按锁定依赖正常安装即可。
 
 输入和合成截图位于 `samples/acceptance-cases.json` 与 `samples/screenshots/`；检查结果与实际转录写入指定 JSON，任一检查失败时退出码为 1。
 
@@ -127,6 +131,8 @@ backend/.venv/Scripts/python.exe -B backend/tests/check_acceptance.py --images -
 
 `POST /analyze` 支持 JSON `text` 或 `messages`（二选一），截图使用 multipart `text` + `image`。PNG、JPEG、WebP 图片最大 10 MiB；后端会检查真实文件内容和像素数。
 原始文字、逐条消息和上传图片均可核对：详情/导出包含原始输入 `source_input`、原图 `source_image` 和截图转录 `source_transcript`。SQLite 启动迁移保留旧记录。完整输入和错误约定见 [docs/api.md](docs/api.md)。
+
+工作台提供文字演示样例（`Ctrl/Cmd + Shift + D`）和买卖双方聊天截图演示样例，方便体验文字与图片整理流程；截图为虚构对话，不含真实客户资料。
 
 ## 数据约定
 

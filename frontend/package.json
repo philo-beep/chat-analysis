@@ -11,7 +11,9 @@
     "test:browser:calendar": "node tests/calendar.browser.mjs",
     "test:browser:sidebar": "node tests/sidebar.browser.mjs",
     "test:browser:entrance": "node tests/entrance.browser.mjs",
-    "test:browser": "npm run test:browser:calendar && npm run test:browser:sidebar && npm run test:browser:entrance"
+    "test:browser:expanded": "node tests/expanded.browser.mjs",
+    "test:browser:customers": "node tests/customers.browser.mjs",
+    "test:browser": "npm run test:browser:calendar && npm run test:browser:sidebar && npm run test:browser:entrance && npm run test:browser:expanded && npm run test:browser:customers"
   },
   "dependencies": {
     "vue": "^3.5.0"

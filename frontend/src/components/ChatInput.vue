@@ -13,6 +13,9 @@ const customerName = ref('')
 const image = ref(null)
 const imageUrl = ref('')
 const inputError = ref('')
+const fillingScreenshot = ref(false)
+const demoNotice = ref('')
+let screenshotController = null
 
 const demoText = `甲方（客户/需求方）：我们准备举办一次团队活动，想定制100件文化衫，总预算3000元。先沟通需求和可行方案，暂时不要安排生产。
 乙方（商家/执行方）：收到，我负责方案、报价和生产协调，您负责内部需求与审批。我们先把穿着场景、面料、图案和交付要求逐项说明，确认后再排计划。
@@ -63,6 +66,7 @@ const demoText = `甲方（客户/需求方）：我们准备举办一次团队�
 
 function setImage(file) {
   inputError.value = ''
+  demoNotice.value = ''
   if (!file) return
   const mime = file.type.toLowerCase()
   const supported = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'].includes(mime)
@@ -95,10 +99,39 @@ function onPaste(event) {
 }
 
 function fillDemo() {
-  if (props.loading) return
+  if (props.loading || fillingScreenshot.value) return
+  removeImage()
   customerName.value = '演示客户'
   text.value = demoText
   inputError.value = ''
+}
+
+async function fillScreenshotDemo() {
+  if (props.loading || fillingScreenshot.value) return
+  fillingScreenshot.value = true
+  inputError.value = ''
+  const controller = new AbortController()
+  screenshotController = controller
+  const timeout = setTimeout(() => controller.abort(), 5000)
+  try {
+    const response = await fetch(`${import.meta.env.BASE_URL}demo-sales-chat.png`, { signal: controller.signal })
+    if (!response.ok) throw new Error('Screenshot unavailable')
+    const blob = await response.blob()
+    if (blob.type !== 'image/png' || !blob.size || blob.size > 10 * 1024 * 1024) throw new Error('Invalid screenshot')
+    if (screenshotController !== controller) return
+    setImage(new File([blob], '买卖双方聊天-演示样例.png', { type: 'image/png' }))
+    customerName.value = '演示客户'
+    text.value = ''
+    demoNotice.value = '已填入虚构的客户与商家聊天截图，点击“开始分析”即可体验。'
+  } catch {
+    if (screenshotController === controller) inputError.value = '截图样例暂时没加载出来，请再试一次。原有内容已保留。'
+  } finally {
+    clearTimeout(timeout)
+    if (screenshotController === controller) {
+      screenshotController = null
+      fillingScreenshot.value = false
+    }
+  }
 }
 
 function handleShortcut(event) {
@@ -111,11 +144,13 @@ function handleShortcut(event) {
 onMounted(() => window.addEventListener('keydown', handleShortcut))
 onUnmounted(() => {
   window.removeEventListener('keydown', handleShortcut)
+  screenshotController?.abort()
+  screenshotController = null
   if (imageUrl.value) URL.revokeObjectURL(imageUrl.value)
 })
 
 function submit() {
-  if (props.loading) return
+  if (props.loading || fillingScreenshot.value) return
   const value = text.value.trim()
   if (!value && !image.value) {
     inputError.value = '请粘贴聊天原文或上传聊天截图'
@@ -128,6 +163,7 @@ function submit() {
 }
 
 function removeImage() {
+  demoNotice.value = ''
   image.value = null
   if (imageUrl.value) URL.revokeObjectURL(imageUrl.value)
   imageUrl.value = ''
@@ -143,7 +179,7 @@ function clear() {
 
 <template>
   <section class="chat-input card">
-    <header class="input-heading"><div class="section-title"><span class="section-icon"><AppIcon name="message" /></span><div><h2>整理客户沟通</h2><p>添加聊天内容，开始一次需求分析</p></div></div><button type="button" class="demo-button ghost" :disabled="props.loading" @click="fillDemo"><AppIcon name="spark" :size="14" />填入演示样例</button></header>
+    <header class="input-heading"><div class="section-title"><span class="section-icon"><AppIcon name="message" /></span><div><h2>整理客户沟通</h2><p>添加聊天内容，开始一次需求分析</p></div></div><div class="demo-actions"><button type="button" class="demo-button ghost" :disabled="props.loading || fillingScreenshot" @click="fillDemo"><AppIcon name="spark" :size="14" />填入演示样例</button><button type="button" class="demo-button ghost" :disabled="props.loading || fillingScreenshot" @click="fillScreenshotDemo"><AppIcon name="message" :size="14" />{{ fillingScreenshot ? '正在填入截图…' : '填入截图样例' }}</button></div></header>
     <div class="input-body">
     <label class="customer-label" for="customer-name">客户名称（可选）</label>
     <input
@@ -152,7 +188,7 @@ function clear() {
       class="customer-name"
       placeholder="例如：张先生 / 某某公司"
       maxlength="100"
-      :disabled="props.loading"
+      :disabled="props.loading || fillingScreenshot"
     />
     <label class="customer-label" for="chat-text">聊天原文</label>
     <p id="role-hint" class="role-hint">多轮聊天请按发言顺序逐行填写：客户：… / 商家：…；仅有客户原话也可以直接粘贴。</p>
@@ -162,27 +198,28 @@ function clear() {
       rows="6"
       placeholder="客户：想定制一批文化衫。&#10;商家：预计多少件，有预算要求吗？&#10;客户：大概100件，预算三四千。"
       aria-describedby="role-hint"
-      :disabled="props.loading"
+      :disabled="props.loading || fillingScreenshot"
       @paste="onPaste"
     />
     <div class="upload-row">
       <label class="upload-button">
         上传聊天截图
-        <input type="file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" :disabled="props.loading" @change="onFileChange" />
+        <input type="file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" :disabled="props.loading || fillingScreenshot" @change="onFileChange" />
       </label>
-      <button v-if="image" type="button" class="file-name" :disabled="props.loading" @click="removeImage">
+      <button v-if="image" type="button" class="file-name" :disabled="props.loading || fillingScreenshot" @click="removeImage">
         {{ image.name }} ×
       </button>
       <span class="hint">PNG / JPG / WebP · 最大 10 MiB</span>
     </div>
     <img v-if="imageUrl" class="preview" :src="imageUrl" alt="聊天截图预览" />
+    <p v-if="demoNotice" class="hint demo-notice" role="status">{{ demoNotice }}</p>
     <p v-if="inputError" class="input-error" role="alert">{{ inputError }}</p>
     <div class="actions">
-      <button type="button" class="primary" :disabled="props.loading" @click="submit">
+      <button type="button" class="primary" :disabled="props.loading || fillingScreenshot" @click="submit">
         <span v-if="props.loading" class="spinner" aria-hidden="true"></span><AppIcon v-else name="spark" :size="16" />
         {{ props.loading ? '分析中…' : '开始分析' }}
       </button>
-      <button type="button" class="ghost" :disabled="props.loading" @click="clear">清空</button>
+      <button type="button" class="ghost" :disabled="props.loading || fillingScreenshot" @click="clear">清空</button>
       <span class="input-meta">{{ text.length ? `${text.length} 字` : '也可直接粘贴聊天截图' }}</span>
     </div>
     <p v-if="props.loading" class="loading-note" role="status">正在整理沟通内容，截图识别可能需要更长时间，请稍候。</p>
@@ -196,7 +233,9 @@ function clear() {
 .input-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 21px 26px; border-bottom: 1px solid var(--line); }
 .input-heading h2 { margin: 0 0 4px; font-size: 16px; color: var(--ink); font-weight: 600; }
 .input-heading p { margin: 0; color: var(--muted); font-size: 11px; }
+.demo-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
 .demo-button { border-color: transparent; color: var(--brand); font-size: 12px; padding: 6px 0 6px 10px; white-space: nowrap; }
+.demo-notice { margin: 10px 0 0; line-height: 1.7; }
 .input-body { padding: 22px 26px; }
 .customer-label { display: block; margin: 19px 0 8px; font-size: 12px; font-weight: 600; color: #4e5a45; }
 .customer-label:first-child { margin-top: 0; }
@@ -219,5 +258,5 @@ textarea { min-height: 160px; background: #fdfdf9; line-height: 1.9; }
 .loading-note { color: var(--brand); font-size: 12px; margin: 12px 0 0; line-height: 1.6; }
 .spinner { width: 14px; height: 14px; border: 2px solid #ffffff66; border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-@media (max-width: 760px) { .input-heading { padding: 18px; flex-wrap: wrap; } .input-body { padding: 18px; } .input-heading p { font-size: 10px; } .demo-button { padding: 0; min-height: 24px; margin-left: 46px; } .input-meta { flex-basis: 100%; margin: 0; } .input-footer { padding: 12px 18px; flex-wrap: wrap; } .shortcut { display: none; } }
+@media (max-width: 760px) { .input-heading { padding: 18px; flex-wrap: wrap; } .input-body { padding: 18px; } .input-heading p { font-size: 10px; } .demo-actions { margin-left: 46px; } .demo-button { padding: 0; min-height: 32px; } .input-meta { flex-basis: 100%; margin: 0; } .input-footer { padding: 12px 18px; flex-wrap: wrap; } .shortcut { display: none; } }
 </style>
