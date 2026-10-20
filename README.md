@@ -128,6 +128,8 @@ backend/.venv/Scripts/python.exe -B backend/tests/check_acceptance.py --images -
 `POST /analyze` 支持 JSON `text` 或 `messages`（二选一），截图使用 multipart `text` + `image`。PNG、JPEG、WebP 图片最大 10 MiB；后端会检查真实文件内容和像素数。
 原始文字、逐条消息和上传图片均可核对：详情/导出包含原始输入 `source_input`、原图 `source_image` 和截图转录 `source_transcript`。SQLite 启动迁移保留旧记录。完整输入和错误约定见 [docs/api.md](docs/api.md)。
 
+工作台提供文字演示样例（`Ctrl/Cmd + Shift + D`）和买卖双方聊天截图演示样例，方便体验文字与图片整理流程；截图为虚构对话，不含真实客户资料。
+
 ## 数据约定
 
 接口：`POST /analyze`，输入聊天原文，输出固定字段的 JSON。详见 [docs/api.md](docs/api.md)。
