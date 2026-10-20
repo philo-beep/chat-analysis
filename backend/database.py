@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Iterator
 
 DB_PATH = Path(__file__).parent / "app.db"
+_NO_PROFILE_CONTEXT = object()
 
 
 class RecordDataError(Exception):
@@ -77,6 +78,7 @@ def save_record(
     source_image: str | None = None, source_transcript: str = "",
     owner_id: int | None = None,
     customer_profile: dict | None = None,
+    profile_context=_NO_PROFILE_CONTEXT,
 ) -> int:
     now = datetime.now().isoformat(timespec="seconds")
     title = text.strip().splitlines()[0][:30] if text.strip() else "未命名"
@@ -98,7 +100,10 @@ def save_record(
         from calendar_store import sync_record_tasks
         sync_record_tasks(conn, owner_id, record_id, result)
         from profile_store import save_snapshot
-        save_snapshot(conn, owner_id, record_id, customer_profile)
+        if profile_context is _NO_PROFILE_CONTEXT:
+            save_snapshot(conn, owner_id, record_id, customer_profile)
+        else:
+            save_snapshot(conn, owner_id, record_id, customer_profile, profile_context=profile_context)
         return record_id
 
 

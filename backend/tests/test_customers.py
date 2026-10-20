@@ -135,6 +135,17 @@ class CustomerTests(unittest.TestCase):
         self.assertEqual(snapshot["profile"]["communication_points"], [])
         self.assertEqual(snapshots["total"], 1)
 
+    def test_existing_database_gains_empty_columns_without_reanalysis(self):
+        self.save()
+        with database._connect() as conn:
+            for column in ('communication_strategy', 'communication_points_json', 'version'):
+                conn.execute('ALTER TABLE customer_profiles DROP COLUMN ' + column)
+        database.init_db()
+        customer = self.listing()['items'][0]
+        self.assertEqual(customer['communication_strategy'], '')
+        self.assertEqual(customer['communication_points'], [])
+        self.assertEqual(customer['snapshot_count'], 1)
+
     def test_invalid_parameters_and_cross_customer_snapshot(self):
         self.save()
         self.save(profile(display_name="陈明", company="星河公司"))

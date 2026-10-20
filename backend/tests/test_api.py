@@ -12,7 +12,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import ANY, patch
 
 BACKEND = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BACKEND))
@@ -275,7 +275,7 @@ class ApiTests(unittest.TestCase):
             "requirements": [], "questions": [], "tasks": [], "reply": ""
         }) as model:
             analyzed = self.analyze("  客户甲：数量待确认\n  ")
-        model.assert_called_once_with("客户甲：数量待确认")
+        model.assert_called_once_with("客户甲：数量待确认", profile_resolver=ANY)
         self.assertEqual(self.client.get(f'/records/{analyzed["id"]}').json()["text"],
                          "  客户甲：数量待确认\n  ")
 
@@ -356,7 +356,7 @@ class ApiTests(unittest.TestCase):
         with patch.object(main, "analyze_chat", return_value=result) as model:
             response = self.client.post("/analyze", json=payload)
         self.assertEqual(response.status_code, 200, response.text)
-        model.assert_called_once_with("[10:01 客户(张先生)] 先做100件。\n[10:02 商家] 可以的。\n[未标注] 数量改成150件")
+        model.assert_called_once_with("[10:01 客户(张先生)] 先做100件。\n[10:02 商家] 可以的。\n[未标注] 数量改成150件", profile_resolver=ANY)
         detail = self.client.get(f'/records/{response.json()["id"]}').json()
         self.assertEqual(detail["source_input"], payload)
         self.assertEqual(detail["text"], model.call_args.args[0])
@@ -400,7 +400,7 @@ class ApiTests(unittest.TestCase):
         with patch.object(main, "analyze_chat_with_source", return_value=AnalysisOutcome(result, transcript)) as model:
             response = self.upload(image_bytes, text=original_text)
         self.assertEqual(response.status_code, 200, response.text)
-        model.assert_called_once_with(original_text.strip(), image_bytes, "image/png")
+        model.assert_called_once_with(original_text.strip(), image_bytes, "image/png", profile_resolver=ANY)
         self.assertEqual(set(response.json()), {"id", "requirements", "questions", "tasks", "reply", "is_sample"})
         record_id = response.json()["id"]
         detail = self.client.get(f"/records/{record_id}").json()

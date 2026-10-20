@@ -64,7 +64,7 @@ onMounted(() => load())
           <p class="company">{{ customer.company || '公司待了解' }}</p>
           <p class="role">{{ customer.role || '角色待了解' }}</p>
           <p v-if="customer.next_follow_up && customer.next_follow_up !== '未知'" class="next-step">下一步：{{ customer.next_follow_up }}</p>
-          <small>最近整理：{{ formatTime(customer.last_conversation_at || customer.updated_at) }}</small>
+          <small>最近整理：{{ formatTime(customer.last_analyzed_at || customer.updated_at) }}</small>
         </button>
       </div>
       <div v-if="total > limit" class="pagination"><button :disabled="offset === 0" @click="load(Math.max(0, offset - limit))">上一页</button><span>{{ offset + 1 }}–{{ Math.min(offset + limit, total) }} / {{ total }} 位客户</span><button :disabled="offset + limit >= total" @click="load(offset + limit)">下一页</button></div>

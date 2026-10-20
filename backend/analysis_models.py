@@ -75,6 +75,26 @@ class CustomerProfile(BaseModel):
     communication_preferences: list[StrictStr] = Field(max_length=5)
     risk_points: list[StrictStr] = Field(max_length=10)
     next_follow_up: StrictStr = Field(max_length=1000)
+    communication_strategy: StrictStr = Field(default="", max_length=1000)
+    communication_points: list[StrictStr] = Field(default_factory=list, max_length=5)
+
+    @model_validator(mode="after")
+    def coherent_guidance(self):
+        if self.communication_points and (len(self.communication_points) < 3
+                or any(not point.strip() or len(point) > 500 for point in self.communication_points)):
+            raise ValueError("沟通要点须为 3–5 条非空、至多 500 字的说明")
+        if bool(self.communication_strategy.strip()) != bool(self.communication_points):
+            raise ValueError("沟通策略与要点应一同提供，信息不足时都留空")
+        return self
+
+
+class CustomerIdentity(BaseModel):
+    """A source-checked counterparty identity, never a list of possible clients."""
+    model_config = ConfigDict(strict=True, extra="forbid")
+    display_name: StrictStr = Field(min_length=1, max_length=200)
+    company: StrictStr = Field(min_length=1, max_length=300)
+    name_quote: StrictStr = Field(max_length=1000)
+    company_quote: StrictStr = Field(max_length=1000)
 
 
 class AIOutput(BaseModel):
@@ -113,10 +133,23 @@ class AIOutput(BaseModel):
 
     @classmethod
     def response_schema(cls) -> dict:
+        schema = cls.model_json_schema()
+        # Old stored profiles may omit guidance; live strict output must include it.
+        def require_all(node):
+            if isinstance(node, dict):
+                node.pop("default", None)
+                if node.get("type") == "object" and "properties" in node:
+                    node["required"] = list(node["properties"])
+                for value in node.values():
+                    require_all(value)
+            elif isinstance(node, list):
+                for value in node:
+                    require_all(value)
+        require_all(schema)
         return {
             "name": "keyoushu_sales_analysis",
             "strict": True,
-            "schema": cls.model_json_schema(),
+            "schema": schema,
         }
 
 

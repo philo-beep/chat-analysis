@@ -25,10 +25,12 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 import database
 import audit
+import profile_store
 from auth import permission
 from auth_routes import router as auth_router
 from access_routes import router as access_router
 from calendar_routes import router as calendar_router
+from customer_routes import router as customer_router
 from ai_service import analyze_chat
 from ai_contract import AnalysisOutcome
 from analysis_models import AIOutput, RecordResult, RequirementModel, SaveRequest, AnalysisAction
@@ -50,6 +52,7 @@ app = FastAPI(title="聊天分析 API", version="0.1.0", lifespan=lifespan)
 app.include_router(auth_router)
 app.include_router(access_router)
 app.include_router(calendar_router)
+app.include_router(customer_router)
 app.include_router(audit.routes())
 app.middleware('http')(audit.record_request)
 
@@ -263,14 +266,14 @@ MAX_IMAGE_PIXELS = 25_000_000
 IMAGE_MIMES = {"PNG": "image/png", "JPEG": "image/jpeg", "WEBP": "image/webp"}
 
 
-def analyze_chat_with_source(text: str, image_bytes: bytes, image_mime: str) -> AnalysisOutcome:
+def analyze_chat_with_source(text: str, image_bytes: bytes, image_mime: str, *, profile_resolver=None) -> AnalysisOutcome:
     """D 的截图入口延迟导入，文本服务不依赖截图模型加载。"""
     import ai_service
 
     handler = getattr(ai_service, "analyze_chat_with_source", None)
     if handler is None:
         raise NotImplementedError("本地截图模型尚未接入")
-    return handler(text, image_bytes, image_mime)
+    return handler(text, image_bytes, image_mime, profile_resolver=profile_resolver)
 
 
 def validate_image(image_bytes: bytes, declared_mime: str | None) -> str:
@@ -307,11 +310,18 @@ def _analyze_and_save(
     owner_id: int | None = None,
 ) -> dict:
     source_transcript = ""
+    resolved = {}
+
+    def resolve_profile(identity):
+        context = profile_store.context_for_identity(owner_id, identity)
+        resolved['context'] = context
+        return context if context.get('profile') is not None else None
+
     try:
         if image_bytes is None:
-            raw_result = analyze_chat(model_text)
+            raw_result = analyze_chat(model_text, profile_resolver=resolve_profile)
         else:
-            outcome = analyze_chat_with_source(model_text, image_bytes, image_mime)
+            outcome = analyze_chat_with_source(model_text, image_bytes, image_mime, profile_resolver=resolve_profile)
             if not isinstance(outcome, AnalysisOutcome) or not isinstance(outcome.source_text, str):
                 raise ValueError("截图模型返回的内部结果不符合约定")
             source_transcript = outcome.source_text
@@ -366,11 +376,15 @@ def _analyze_and_save(
     source_image = None
     if image_bytes is not None:
         source_image = f"data:{image_mime};base64," + base64.b64encode(image_bytes).decode("ascii")
-    record_id = database.save_record(
-        source_text, result, source_input=source_input,
-        source_image=source_image, source_transcript=source_transcript, owner_id=owner_id,
-        customer_profile=profile,
-    )
+    try:
+        record_id = database.save_record(
+            source_text, result, source_input=source_input,
+            source_image=source_image, source_transcript=source_transcript, owner_id=owner_id,
+            customer_profile=profile,
+            **({'profile_context': resolved['context']} if 'context' in resolved else {}),
+        )
+    except profile_store.ProfileConflictError:
+        raise HTTPException(status_code=409, detail='这位客户刚有新的整理结果，本次尚未保存，请重新整理以合并最新资料') from None
     return {"id": record_id, **result}
 
 

@@ -107,7 +107,7 @@ try {
   await detail.getByRole('button', { name: '回到最新', exact: true }).click()
   await guidance.getByText('先给阶梯报价，再确认交期。', { exact: true }).waitFor()
   assert.equal(await detail.locator('.history-banner').count(), 0)
-  pass('两次分析保存两份快照，可回看历史、刷新保留选择并返回最新')
+  pass('两次隔离保存生成两份快照，可回看历史、刷新保留选择并返回最新')
   await detail.screenshot({ path: resolve(temp, 'customer-detail-desktop.png'), animations: 'disabled' })
   await page.setViewportSize({ width: 320, height: 900 })
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true)

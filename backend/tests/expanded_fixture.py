@@ -13,7 +13,8 @@ OUTPUT = {
     'suggested_tasks': [{'title': '准备阶梯报价', 'reason': '客户正在核对采购数量，可提供不同数量的价格方案。', 'priority': 'high'}],
     'customer_profile': {'display_name': '林晓', 'role': '采购', 'company': '云杉公司', 'industry': '未知',
                          'concerns': ['交期'], 'decision_style': '未知', 'communication_preferences': [],
-                         'risk_points': ['交货日期需要核实'], 'next_follow_up': '确认可行交期'},
+                         'risk_points': ['交货日期需要核实'], 'next_follow_up': '确认可行交期',
+                         'communication_strategy': '', 'communication_points': []},
 }
 
 
