@@ -30,6 +30,11 @@ defineEmits(['navigate', 'scope'])
         <AppIcon name="calendar" :size="14" /><span>日程计划</span>
       </button>
     </section>
+    <section class="record-list">
+      <button class="directory" :class="{ selected: section === 'customers' }" :aria-current="section === 'customers' ? 'page' : undefined" :disabled="disabled" @click="$emit('navigate', 'customers')">
+        <AppIcon name="customers" :size="14" /><span>我的客户</span>
+      </button>
+    </section>
     <section v-for="item in directorySections" :key="item.key" class="record-list">
       <button class="directory" :class="{ selected: section === item.key }" :aria-current="section === item.key ? 'page' : undefined" :disabled="disabled || (scope === 'current' && !recordId)" @click="$emit('navigate', item.key)">
         <AppIcon :name="item.icon" :size="14" /><span>{{ item.label }}</span>

@@ -99,3 +99,12 @@ test('单份聊天地址保留记录和分类，非法记录编号不得成为�
   }
   assert.equal(hashForSection('workspace', 12), '#/')
 })
+
+test('客户与历史快照地址独立于聊天范围，刷新可恢复且拒绝非法编号', () => {
+  assert.deepEqual(routeFromHash(hashForSection('customers')), { section: 'customers', recordId: null, customerId: null, snapshotId: null })
+  assert.deepEqual(routeFromHash(hashForSection('customers', null, 8)), { section: 'customers', recordId: null, customerId: 8, snapshotId: null })
+  assert.deepEqual(routeFromHash(hashForSection('customers', null, 8, 12)), { section: 'customers', recordId: null, customerId: 8, snapshotId: 12 })
+  for (const hash of ['#/customers/0', '#/customers/-1', '#/customers/1/snapshots/0', '#/customers/9007199254740992', '#/customers/1/snapshots/9007199254740992']) {
+    assert.deepEqual(routeFromHash(hash), { section: 'workspace', recordId: null })
+  }
+})
