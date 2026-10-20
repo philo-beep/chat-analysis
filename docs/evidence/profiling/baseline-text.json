@@ -1,0 +1,363 @@
+{
+  "scenario": "text",
+  "dry_run": false,
+  "limit_seconds": 90,
+  "model": "gpt-6.1-sol",
+  "reasoning_effort": "medium",
+  "quality_review": true,
+  "fixture": "current built-in demo, synthetic data, real cloud, temporary database",
+  "measured_scope": "TestClient -> real /analyze -> full response; excludes browser rendering",
+  "text_chars": 3279,
+  "text_messages": 46,
+  "image_bytes": 85960,
+  "image_dimensions": [
+    900,
+    1320
+  ],
+  "input_sha256": "557f0d8ae02730a0611ff11aebe2f9fc1ebaa69457f17a4e0a957b4d5b6abcbf",
+  "analysis_prompt_chars": 2504,
+  "token_usage": [
+    {
+      "prompt_tokens": 7062,
+      "completion_tokens": 121,
+      "total_tokens": 7183
+    },
+    {
+      "prompt_tokens": 7062,
+      "completion_tokens": 36,
+      "total_tokens": 7098
+    }
+  ],
+  "status": 502,
+  "complete": true,
+  "result_keys": [
+    "detail"
+  ],
+  "saved_records": 0,
+  "elapsed_ms": 22495.263,
+  "timings": {
+    "request.total": {
+      "calls": 1,
+      "duration_ms": 22492.449,
+      "exclusive_ms": 24.412,
+      "unfinished": 0
+    },
+    "request.authentication": {
+      "calls": 1,
+      "duration_ms": 3.076,
+      "exclusive_ms": 3.076,
+      "unfinished": 0
+    },
+    "request.handler": {
+      "calls": 1,
+      "duration_ms": 22464.961,
+      "exclusive_ms": 3.861,
+      "unfinished": 0
+    },
+    "request.body_receive": {
+      "calls": 2,
+      "duration_ms": 2.409,
+      "exclusive_ms": 1.682,
+      "unfinished": 0
+    },
+    "request.parse_json": {
+      "calls": 1,
+      "duration_ms": 0.49,
+      "exclusive_ms": 0.49,
+      "unfinished": 0
+    },
+    "request.schema_validation": {
+      "calls": 1,
+      "duration_ms": 0.59,
+      "exclusive_ms": 0.59,
+      "unfinished": 0
+    },
+    "request.normalize": {
+      "calls": 1,
+      "duration_ms": 0.389,
+      "exclusive_ms": 0.389,
+      "unfinished": 0
+    },
+    "analysis_and_save": {
+      "calls": 1,
+      "duration_ms": 22457.949,
+      "exclusive_ms": 2.317,
+      "unfinished": 0
+    },
+    "ai.settings": {
+      "calls": 1,
+      "duration_ms": 1.042,
+      "exclusive_ms": 1.042,
+      "unfinished": 0
+    },
+    "ai.analysis_pipeline": {
+      "calls": 1,
+      "duration_ms": 22454.591,
+      "exclusive_ms": 1.916,
+      "unfinished": 0
+    },
+    "ai.prompt_load": {
+      "calls": 1,
+      "duration_ms": 0.916,
+      "exclusive_ms": 0.916,
+      "unfinished": 0
+    },
+    "ai.schema_prepare": {
+      "calls": 1,
+      "duration_ms": 3.106,
+      "exclusive_ms": 3.106,
+      "unfinished": 0
+    },
+    "ai.identity_pipeline": {
+      "calls": 1,
+      "duration_ms": 22448.653,
+      "exclusive_ms": 5.049,
+      "unfinished": 0
+    },
+    "cloud.identity": {
+      "calls": 2,
+      "duration_ms": 22441.856,
+      "exclusive_ms": 99.421,
+      "unfinished": 0
+    },
+    "cloud.wait_response_headers": {
+      "calls": 2,
+      "duration_ms": 22338.424,
+      "exclusive_ms": 22338.424,
+      "unfinished": 0
+    },
+    "cloud.read_response_body": {
+      "calls": 2,
+      "duration_ms": 1.784,
+      "exclusive_ms": 1.784,
+      "unfinished": 0
+    },
+    "ai.json_parse": {
+      "calls": 4,
+      "duration_ms": 2.281,
+      "exclusive_ms": 2.281,
+      "unfinished": 0
+    },
+    "ai.provider_response_validate": {
+      "calls": 2,
+      "duration_ms": 0.795,
+      "exclusive_ms": 0.795,
+      "unfinished": 0
+    },
+    "ai.identity_validation": {
+      "calls": 2,
+      "duration_ms": 0.899,
+      "exclusive_ms": 0.899,
+      "unfinished": 0
+    }
+  },
+  "spans": [
+    {
+      "id": 1,
+      "parent": null,
+      "phase": "request.total",
+      "start_ms": 0.20969999604858458,
+      "duration_ms": 22492.44910001289
+    },
+    {
+      "id": 2,
+      "parent": 1,
+      "phase": "request.authentication",
+      "start_ms": 11.382600001525134,
+      "duration_ms": 3.0755999905522913
+    },
+    {
+      "id": 3,
+      "parent": 1,
+      "phase": "request.handler",
+      "start_ms": 15.551299991784617,
+      "error_type": "HTTPException",
+      "duration_ms": 22464.961299992865
+    },
+    {
+      "id": 4,
+      "parent": 3,
+      "phase": "request.body_receive",
+      "start_ms": 16.0193000047002,
+      "duration_ms": 1.6822000034153461
+    },
+    {
+      "id": 5,
+      "parent": 4,
+      "phase": "request.body_receive",
+      "start_ms": 16.466900007799268,
+      "error_type": "GeneratorExit",
+      "duration_ms": 0.7271999784279615
+    },
+    {
+      "id": 6,
+      "parent": 3,
+      "phase": "request.parse_json",
+      "start_ms": 18.11710000038147,
+      "duration_ms": 0.4903000080958009
+    },
+    {
+      "id": 7,
+      "parent": 3,
+      "phase": "request.schema_validation",
+      "start_ms": 19.335799996042624,
+      "duration_ms": 0.5899000097997487
+    },
+    {
+      "id": 8,
+      "parent": 3,
+      "phase": "request.normalize",
+      "start_ms": 20.400799985509366,
+      "duration_ms": 0.3886000195052475
+    },
+    {
+      "id": 9,
+      "parent": 3,
+      "phase": "analysis_and_save",
+      "start_ms": 21.248100005323067,
+      "error_type": "HTTPException",
+      "duration_ms": 22457.949400006328
+    },
+    {
+      "id": 10,
+      "parent": 9,
+      "phase": "ai.settings",
+      "start_ms": 21.632199990563095,
+      "duration_ms": 1.041900017298758
+    },
+    {
+      "id": 11,
+      "parent": 9,
+      "phase": "ai.analysis_pipeline",
+      "start_ms": 23.380200000246987,
+      "error_type": "InvalidModelOutput",
+      "duration_ms": 22454.590899986215
+    },
+    {
+      "id": 12,
+      "parent": 11,
+      "phase": "ai.prompt_load",
+      "start_ms": 23.990499990759417,
+      "duration_ms": 0.9158000175375491
+    },
+    {
+      "id": 13,
+      "parent": 11,
+      "phase": "ai.schema_prepare",
+      "start_ms": 25.32650000648573,
+      "duration_ms": 3.105699986917898
+    },
+    {
+      "id": 14,
+      "parent": 11,
+      "phase": "ai.identity_pipeline",
+      "start_ms": 28.89889999642037,
+      "error_type": "InvalidModelOutput",
+      "duration_ms": 22448.65310000023
+    },
+    {
+      "id": 15,
+      "parent": 14,
+      "phase": "cloud.identity",
+      "start_ms": 31.345499999588355,
+      "system_chars": 222,
+      "input_chars": 3352,
+      "image_bytes_base64": 0,
+      "duration_ms": 10055.692299996736
+    },
+    {
+      "id": 16,
+      "parent": 15,
+      "phase": "cloud.wait_response_headers",
+      "start_ms": 94.35930001200177,
+      "duration_ms": 9988.92919998616
+    },
+    {
+      "id": 17,
+      "parent": 15,
+      "phase": "cloud.read_response_body",
+      "start_ms": 10084.02819998446,
+      "duration_ms": 0.7622000121045858
+    },
+    {
+      "id": 18,
+      "parent": 15,
+      "phase": "ai.json_parse",
+      "start_ms": 10085.30159998918,
+      "duration_ms": 0.6151999987196177
+    },
+    {
+      "id": 19,
+      "parent": 15,
+      "phase": "ai.provider_response_validate",
+      "start_ms": 10086.311499995645,
+      "duration_ms": 0.35650000791065395
+    },
+    {
+      "id": 20,
+      "parent": 14,
+      "phase": "ai.json_parse",
+      "start_ms": 10087.524500006111,
+      "duration_ms": 0.43990000267513096
+    },
+    {
+      "id": 21,
+      "parent": 14,
+      "phase": "ai.identity_validation",
+      "start_ms": 10088.319400005275,
+      "duration_ms": 0.42019999818876386
+    },
+    {
+      "id": 22,
+      "parent": 14,
+      "phase": "cloud.identity",
+      "start_ms": 10089.207999990322,
+      "system_chars": 222,
+      "input_chars": 3352,
+      "image_bytes_base64": 0,
+      "duration_ms": 12386.164199997438
+    },
+    {
+      "id": 23,
+      "parent": 22,
+      "phase": "cloud.wait_response_headers",
+      "start_ms": 10121.305200009374,
+      "duration_ms": 12349.494599999161
+    },
+    {
+      "id": 24,
+      "parent": 22,
+      "phase": "cloud.read_response_body",
+      "start_ms": 22471.691499988083,
+      "duration_ms": 1.0221000120509416
+    },
+    {
+      "id": 25,
+      "parent": 22,
+      "phase": "ai.json_parse",
+      "start_ms": 22473.190499993507,
+      "duration_ms": 0.8177999989129603
+    },
+    {
+      "id": 26,
+      "parent": 22,
+      "phase": "ai.provider_response_validate",
+      "start_ms": 22474.467599997297,
+      "duration_ms": 0.4380999889690429
+    },
+    {
+      "id": 27,
+      "parent": 14,
+      "phase": "ai.json_parse",
+      "start_ms": 22475.797199993394,
+      "duration_ms": 0.40809999336488545
+    },
+    {
+      "id": 28,
+      "parent": 14,
+      "phase": "ai.identity_validation",
+      "start_ms": 22476.57560001244,
+      "duration_ms": 0.47909998102113605
+    }
+  ]
+}

@@ -7,13 +7,14 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test tests/calendarDates.test.mjs tests/recordViews.test.mjs",
+    "test": "node --test tests/calendarDates.test.mjs tests/recordViews.test.mjs tests/demo-api.test.mjs",
     "test:browser:calendar": "node tests/calendar.browser.mjs",
     "test:browser:sidebar": "node tests/sidebar.browser.mjs",
     "test:browser:entrance": "node tests/entrance.browser.mjs",
     "test:browser:expanded": "node tests/expanded.browser.mjs",
     "test:browser:customers": "node tests/customers.browser.mjs",
-    "test:browser": "npm run test:browser:calendar && npm run test:browser:sidebar && npm run test:browser:entrance && npm run test:browser:expanded && npm run test:browser:customers"
+    "test:browser:speed": "node tests/speed.browser.mjs",
+    "test:browser": "npm run test:browser:calendar && npm run test:browser:sidebar && npm run test:browser:entrance && npm run test:browser:expanded && npm run test:browser:customers && npm run test:browser:speed"
   },
   "dependencies": {
     "vue": "^3.5.0"

@@ -11,7 +11,7 @@ sys.path.insert(0, str(BACKEND))
 
 import ai_service
 from ai_contract import AnalysisOutcome
-from expanded_fixture import output as expanded_output
+from expanded_fixture import output as expanded_output, review_output
 
 
 class SettingsTests(unittest.TestCase):
@@ -119,7 +119,7 @@ class ContractTests(unittest.TestCase):
         expanded.update(draft)
         expanded.update(ddl_tasks=[], suggested_tasks=[], customer_profile={**expanded['customer_profile'], 'display_name': '未知', 'company': '未知'})
         draft = expanded
-        reviewed = {**draft, 'requirements': [{'field': '数量', 'value': '大概100件', 'evidence': '大概100件'}]}
+        reviewed = review_output(requirements=[{'field': '数量', 'value': '大概100件', 'evidence': '大概100件'}])
         client = ai_service.ChatCompletionsClient(ai_service.Settings('test-key', quality_review=True))
         with patch.object(client, 'complete', side_effect=[json.dumps(draft), json.dumps(reviewed)]) as complete:
             result = ai_service._analyze(text, client)

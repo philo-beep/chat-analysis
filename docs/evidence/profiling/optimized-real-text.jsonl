@@ -1,0 +1,26 @@
+{"event": "start", "id": 1, "parent": null, "phase": "request.total", "start_ms": 0.27299998328089714}
+{"event": "start", "id": 2, "parent": 1, "phase": "request.authentication", "start_ms": 11.338099982822314}
+{"event": "end", "id": 2, "parent": 1, "phase": "request.authentication", "start_ms": 11.338099982822314, "duration_ms": 2.836700004991144}
+{"event": "start", "id": 3, "parent": 1, "phase": "request.handler", "start_ms": 15.63690000330098}
+{"event": "start", "id": 4, "parent": 3, "phase": "request.body_receive", "start_ms": 16.148399998201057}
+{"event": "start", "id": 5, "parent": 4, "phase": "request.body_receive", "start_ms": 16.628699988359585}
+{"event": "end", "id": 5, "parent": 4, "phase": "request.body_receive", "start_ms": 16.628699988359585, "error_type": "GeneratorExit", "duration_ms": 0.5951999919489026}
+{"event": "end", "id": 4, "parent": 3, "phase": "request.body_receive", "start_ms": 16.148399998201057, "duration_ms": 1.6281999996863306}
+{"event": "start", "id": 6, "parent": 3, "phase": "request.parse_json", "start_ms": 18.20759999100119}
+{"event": "end", "id": 6, "parent": 3, "phase": "request.parse_json", "start_ms": 18.20759999100119, "duration_ms": 0.7728000055067241}
+{"event": "start", "id": 7, "parent": 3, "phase": "request.schema_validation", "start_ms": 19.541999994544312}
+{"event": "end", "id": 7, "parent": 3, "phase": "request.schema_validation", "start_ms": 19.541999994544312, "duration_ms": 0.3727999865077436}
+{"event": "start", "id": 8, "parent": 3, "phase": "request.normalize", "start_ms": 20.42999997502193}
+{"event": "end", "id": 8, "parent": 3, "phase": "request.normalize", "start_ms": 20.42999997502193, "duration_ms": 0.5619000003207475}
+{"event": "start", "id": 9, "parent": 3, "phase": "analysis_and_save", "start_ms": 21.562099980656058}
+{"event": "start", "id": 10, "parent": 9, "phase": "ai.settings", "start_ms": 23.155000002589077}
+{"event": "end", "id": 10, "parent": 9, "phase": "ai.settings", "start_ms": 23.155000002589077, "duration_ms": 0.7981999951880425}
+{"event": "start", "id": 11, "parent": 9, "phase": "ai.settings", "start_ms": 26.336599985370412}
+{"event": "end", "id": 11, "parent": 9, "phase": "ai.settings", "start_ms": 26.336599985370412, "duration_ms": 0.731500011170283}
+{"event": "start", "id": 12, "parent": 9, "phase": "ai.analysis_pipeline", "start_ms": 27.480499993544072}
+{"event": "start", "id": 13, "parent": 12, "phase": "ai.prompt_load", "start_ms": 27.93399998336099}
+{"event": "end", "id": 13, "parent": 12, "phase": "ai.prompt_load", "start_ms": 27.93399998336099, "duration_ms": 0.6231000006664544}
+{"event": "start", "id": 14, "parent": 12, "phase": "ai.schema_prepare", "start_ms": 28.993099986109883}
+{"event": "end", "id": 14, "parent": 12, "phase": "ai.schema_prepare", "start_ms": 28.993099986109883, "duration_ms": 3.9086999895516783}
+{"event": "start", "id": 15, "parent": 12, "phase": "cloud.analysis", "start_ms": 33.346999989589676, "system_chars": 2507, "input_chars": 3405, "image_bytes_base64": 0}
+{"event": "start", "id": 16, "parent": 15, "phase": "cloud.wait_response_headers", "start_ms": 72.0650999865029}

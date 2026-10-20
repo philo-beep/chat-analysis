@@ -1,0 +1,320 @@
+{
+  "scenario": "image",
+  "dry_run": false,
+  "demo_requested": true,
+  "limit_seconds": 15,
+  "model": "gpt-6.1-sol",
+  "reasoning_effort": "medium",
+  "quality_review": true,
+  "fixture": "current built-in demo, synthetic data, real cloud, temporary database",
+  "measured_scope": "TestClient -> real /analyze -> full response; excludes browser rendering",
+  "text_chars": 3279,
+  "text_messages": 46,
+  "image_bytes": 85960,
+  "image_dimensions": [
+    900,
+    1320
+  ],
+  "input_sha256": "6a11bf601a1439f071b445c06ce6c82302aabd5a821cb337e7d39d359467f721",
+  "status": 200,
+  "complete": true,
+  "result_keys": [
+    "id",
+    "requirements",
+    "questions",
+    "tasks",
+    "reply",
+    "is_sample",
+    "analysis_version",
+    "ddl_tasks",
+    "suggested_tasks",
+    "action_states"
+  ],
+  "response": {
+    "id": 1,
+    "requirements": [
+      {
+        "field": "产品",
+        "value": "文化衫",
+        "evidence": "我们公司活动想定一批文化衫"
+      },
+      {
+        "field": "数量",
+        "value": "150件",
+        "evidence": "人数刚确认了，要改成150件"
+      },
+      {
+        "field": "预算上限",
+        "value": "6000元",
+        "evidence": "预算上限6000元"
+      },
+      {
+        "field": "收货时间",
+        "value": "11月20日前",
+        "evidence": "收货要在11月20日前"
+      }
+    ],
+    "questions": [
+      {
+        "question": "截图中的“明天下午前”对应哪一天？",
+        "initial_guess": "演示按本次参考日期推算为2026-10-21；截图标注10月19日但未写年份，请核对实际聊天日期。",
+        "related_ddl_index": 0,
+        "status": "pending",
+        "confirmed_answer": null
+      },
+      {
+        "question": "收货截止日期是否为2026-11-20？",
+        "initial_guess": "演示按接下来一次11月20日推算为2026-11-20，年份和实际聊天日期仍需确认。",
+        "related_ddl_index": 1,
+        "status": "pending",
+        "confirmed_answer": null
+      },
+      {
+        "question": "颜色和尺码表确认后，方便提供最终版本吗？",
+        "initial_guess": "客户表示颜色和尺码表仍在确认",
+        "related_ddl_index": null,
+        "status": "pending",
+        "confirmed_answer": null
+      },
+      {
+        "question": "标识文件预计何时可以发送？",
+        "initial_guess": "客户表示稍后发送标识文件",
+        "related_ddl_index": null,
+        "status": "pending",
+        "confirmed_answer": null
+      },
+      {
+        "question": "内部审批预计何时完成，是否有需要纳入报价的审批要求？",
+        "initial_guess": "预算上限已明确为6000元，但报价仍需内部审批",
+        "related_ddl_index": null,
+        "status": "pending",
+        "confirmed_answer": null
+      }
+    ],
+    "tasks": [],
+    "reply": "收到，文化衫数量已更新为150件，预算上限为6000元，收货希望在11月20日前。想再确认一下收货年份；颜色和尺码表、标识文件方便时也请发我，另外预算内部审批预计何时完成？",
+    "is_sample": true,
+    "analysis_version": 2,
+    "ddl_tasks": [
+      {
+        "title": "提供分项报价和效果图",
+        "ddl_date": "2026-10-21",
+        "start_date": null,
+        "source_quote": "明天下午前给你分项报价和效果图",
+        "date_basis": "inferred"
+      },
+      {
+        "title": "完成收货",
+        "ddl_date": "2026-11-20",
+        "start_date": null,
+        "source_quote": "收货要在11月20日前",
+        "date_basis": "inferred"
+      }
+    ],
+    "suggested_tasks": [
+      {
+        "title": "核实生产与物流时间",
+        "reason": "商家表示需要先核实生产和物流时间，客户提出11月20日前收货。",
+        "priority": "high"
+      }
+    ],
+    "action_states": {}
+  },
+  "saved_records": 1,
+  "elapsed_ms": 62.964,
+  "timings": {
+    "request.total": {
+      "calls": 1,
+      "duration_ms": 60.598,
+      "exclusive_ms": 21.855,
+      "unfinished": 0
+    },
+    "request.authentication": {
+      "calls": 1,
+      "duration_ms": 3.199,
+      "exclusive_ms": 3.199,
+      "unfinished": 0
+    },
+    "request.handler": {
+      "calls": 1,
+      "duration_ms": 35.543,
+      "exclusive_ms": 3.309,
+      "unfinished": 0
+    },
+    "request.body_receive": {
+      "calls": 3,
+      "duration_ms": 4.187,
+      "exclusive_ms": 3.154,
+      "unfinished": 0
+    },
+    "request.parse_multipart": {
+      "calls": 1,
+      "duration_ms": 1.653,
+      "exclusive_ms": 1.029,
+      "unfinished": 0
+    },
+    "image.local_validate": {
+      "calls": 1,
+      "duration_ms": 7.434,
+      "exclusive_ms": 7.434,
+      "unfinished": 0
+    },
+    "analysis_and_save": {
+      "calls": 1,
+      "duration_ms": 20.617,
+      "exclusive_ms": 4.569,
+      "unfinished": 0
+    },
+    "ai.source_validation": {
+      "calls": 1,
+      "duration_ms": 2.356,
+      "exclusive_ms": 1.477,
+      "unfinished": 0
+    },
+    "ai.schema_validation": {
+      "calls": 2,
+      "duration_ms": 1.31,
+      "exclusive_ms": 1.31,
+      "unfinished": 0
+    },
+    "result.schema_validation": {
+      "calls": 1,
+      "duration_ms": 0.561,
+      "exclusive_ms": 0.561,
+      "unfinished": 0
+    },
+    "database.transaction_total": {
+      "calls": 1,
+      "duration_ms": 12.699,
+      "exclusive_ms": 11.648,
+      "unfinished": 0
+    },
+    "database.calendar_sync": {
+      "calls": 1,
+      "duration_ms": 0.49,
+      "exclusive_ms": 0.49,
+      "unfinished": 0
+    },
+    "database.profile_and_snapshot": {
+      "calls": 1,
+      "duration_ms": 0.561,
+      "exclusive_ms": 0.561,
+      "unfinished": 0
+    }
+  },
+  "spans": [
+    {
+      "id": 1,
+      "parent": null,
+      "phase": "request.total",
+      "start_ms": 0.21919998107478023,
+      "duration_ms": 60.59760000789538
+    },
+    {
+      "id": 2,
+      "parent": 1,
+      "phase": "request.authentication",
+      "start_ms": 11.07039998169057,
+      "duration_ms": 3.1993000011425465
+    },
+    {
+      "id": 3,
+      "parent": 1,
+      "phase": "request.handler",
+      "start_ms": 15.366099978564307,
+      "duration_ms": 35.54320000694133
+    },
+    {
+      "id": 4,
+      "parent": 3,
+      "phase": "request.body_receive",
+      "start_ms": 15.980899974238127,
+      "duration_ms": 2.53060000250116
+    },
+    {
+      "id": 5,
+      "parent": 4,
+      "phase": "request.body_receive",
+      "start_ms": 16.536599985556677,
+      "error_type": "GeneratorExit",
+      "duration_ms": 1.0331000084988773
+    },
+    {
+      "id": 6,
+      "parent": 3,
+      "phase": "request.parse_multipart",
+      "start_ms": 18.951699981698766,
+      "duration_ms": 1.6525000100955367
+    },
+    {
+      "id": 7,
+      "parent": 6,
+      "phase": "request.body_receive",
+      "start_ms": 19.451499974820763,
+      "duration_ms": 0.6233000021893531
+    },
+    {
+      "id": 8,
+      "parent": 3,
+      "phase": "image.local_validate",
+      "start_ms": 21.402599988505244,
+      "duration_ms": 7.434099999954924
+    },
+    {
+      "id": 9,
+      "parent": 3,
+      "phase": "analysis_and_save",
+      "start_ms": 29.55789997940883,
+      "duration_ms": 20.617100002709776
+    },
+    {
+      "id": 10,
+      "parent": 9,
+      "phase": "ai.source_validation",
+      "start_ms": 31.998499995097518,
+      "duration_ms": 2.3558999819215387
+    },
+    {
+      "id": 11,
+      "parent": 10,
+      "phase": "ai.schema_validation",
+      "start_ms": 32.45559998322278,
+      "duration_ms": 0.8784999954514205
+    },
+    {
+      "id": 12,
+      "parent": 9,
+      "phase": "ai.schema_validation",
+      "start_ms": 34.76539999246597,
+      "duration_ms": 0.4317999992053956
+    },
+    {
+      "id": 13,
+      "parent": 9,
+      "phase": "result.schema_validation",
+      "start_ms": 35.68309999536723,
+      "duration_ms": 0.5613999965135008
+    },
+    {
+      "id": 14,
+      "parent": 9,
+      "phase": "database.transaction_total",
+      "start_ms": 36.95670000161044,
+      "duration_ms": 12.699099985184148
+    },
+    {
+      "id": 15,
+      "parent": 14,
+      "phase": "database.calendar_sync",
+      "start_ms": 39.52009999193251,
+      "duration_ms": 0.49020000733435154
+    },
+    {
+      "id": 16,
+      "parent": 14,
+      "phase": "database.profile_and_snapshot",
+      "start_ms": 40.485499979695305,
+      "duration_ms": 0.5605000187642872
+    }
+  ]
+}

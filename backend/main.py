@@ -26,6 +26,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 import database
 import audit
 import profile_store
+import analysis_cache
 from auth import permission
 from auth_routes import router as auth_router
 from access_routes import router as access_router
@@ -308,6 +309,7 @@ def _analyze_and_save(
     model_text: str, original_text: str, source_input: dict,
     image_bytes: bytes | None = None, image_mime: str | None = None,
     owner_id: int | None = None,
+    demo_requested: bool = False,
 ) -> dict:
     source_transcript = ""
     resolved = {}
@@ -318,9 +320,31 @@ def _analyze_and_save(
         return context if context.get('profile') is not None else None
 
     try:
-        if image_bytes is None:
+        from demo_samples import get_demo_analysis
+        demo_text = original_text.replace('\r\n', '\n') if image_bytes is not None else original_text
+        demo = get_demo_analysis(demo_text, image_bytes, image_mime) if demo_requested else None
+        cached = None
+        cache_key = None
+        if demo is None:
+            try:
+                cache_key = analysis_cache.key(owner_id, original_text, image_bytes, image_mime)
+                cached = analysis_cache.get(cache_key)
+            except (ConfigurationError, sqlite3.Error, OSError):
+                # Real model entry still raises its normal safe setup error;
+                # injected/legacy integrations need no cloud settings for caching.
+                pass
+        if demo is not None:
+            raw_result = {**demo['result'], 'is_sample': True}
+            source_transcript = demo['transcript']
+        elif cached is not None:
+            raw_result = cached['result']
+            source_transcript = cached['transcript']
+            resolved['context'] = cached['context']
+        elif image_bytes is None:
+            resolve_profile.has_profiles = profile_store.has_named_profiles(owner_id)
             raw_result = analyze_chat(model_text, profile_resolver=resolve_profile)
         else:
+            resolve_profile.has_profiles = profile_store.has_named_profiles(owner_id)
             outcome = analyze_chat_with_source(model_text, image_bytes, image_mime, profile_resolver=resolve_profile)
             if not isinstance(outcome, AnalysisOutcome) or not isinstance(outcome.source_text, str):
                 raise ValueError("截图模型返回的内部结果不符合约定")
@@ -349,7 +373,7 @@ def _analyze_and_save(
             model_output = AIOutput.model_validate({key: value for key, value in raw_result.items() if key != 'is_sample'})
             values = model_output.model_dump()
             profile = values.pop('customer_profile')
-            values.update(analysis_version=2, is_sample=False, action_states={})
+            values.update(analysis_version=2, is_sample=demo is not None, action_states={})
             values['questions'] = [{**question, 'status': 'pending', 'confirmed_answer': None}
                                    for question in values['questions']]
             validated = ResultModel.model_validate(values)
@@ -380,11 +404,21 @@ def _analyze_and_save(
         record_id = database.save_record(
             source_text, result, source_input=source_input,
             source_image=source_image, source_transcript=source_transcript, owner_id=owner_id,
-            customer_profile=profile,
+            customer_profile=None if demo is not None else profile,
             **({'profile_context': resolved['context']} if 'context' in resolved else {}),
         )
     except profile_store.ProfileConflictError:
         raise HTTPException(status_code=409, detail='这位客户刚有新的整理结果，本次尚未保存，请重新整理以合并最新资料') from None
+    if demo is None and profile is not None and 'context' in resolved:
+        # Cache only successful, transactionally saved analyses, with a new private
+        # profile revision. Cached action states are never reused.
+        try:
+            current_context = profile_store.context_for_identity(owner_id, profile)
+            if current_context.get('profile') is None or current_context.get('profile') == profile:
+                analysis_cache.put(analysis_cache.key(owner_id, original_text, image_bytes, image_mime),
+                    {'result': raw_result, 'transcript': source_transcript, 'context': current_context})
+        except (ConfigurationError, sqlite3.Error, OSError):
+            pass
     return {"id": record_id, **result}
 
 
@@ -431,6 +465,7 @@ async def analyze(request: Request, user=Depends(permission('analysis:run'))) ->
         return await run_in_threadpool(
             _analyze_and_save, original_text.strip(), original_text,
             {"text": original_text}, image_bytes, image_mime, user['id'],
+            demo_requested=request.headers.get('x-keyoushu-demo') == '1',
         )
     if content_type != "application/json":
         raise HTTPException(status_code=415, detail="请使用 JSON 文本或 multipart 图片表单")
@@ -446,6 +481,7 @@ async def analyze(request: Request, user=Depends(permission('analysis:run'))) ->
     return await run_in_threadpool(
         _analyze_and_save, chat["text"], original_text,
         original_payload, owner_id=user['id'],
+        demo_requested=request.headers.get('x-keyoushu-demo') == '1',
     )
 
 

@@ -7,7 +7,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import ai_service
 from analysis_models import AIOutput
-from expanded_fixture import SOURCE, output
+from expanded_fixture import SOURCE, output, review_output
 
 
 class ExpandedAITests(unittest.TestCase):
@@ -52,7 +52,7 @@ class ExpandedAITests(unittest.TestCase):
     def test_quality_review_keeps_seven_field_schema(self):
         client = self.client()
         client.settings = ai_service.Settings('isolated-test', quality_review=True)
-        with patch.object(client, 'complete', return_value=json.dumps(output())) as call:
+        with patch.object(client, 'complete', side_effect=[json.dumps(output()), json.dumps(review_output())]) as call:
             ai_service._analyze(SOURCE, client)
         self.assertEqual(call.call_count, 2)
         self.assertEqual(call.call_args.kwargs['schema']['strict'], True)

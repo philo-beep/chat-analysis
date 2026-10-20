@@ -129,14 +129,16 @@ export function trackCopy(id) {
 // 兼容旧调用 analyze('...')，截图请求使用 multipart/form-data。
 export function analyze(input) {
   const payload = typeof input === 'string' ? { text: input, image: null } : input || {}
+  const headers = payload.demo === true ? { 'X-Keyoushu-Demo': '1' } : {}
   if (payload.image) {
     const form = new FormData()
     form.append('text', payload.text || '')
     form.append('image', payload.image, payload.image.name || 'chat-screenshot')
-    return request('/analyze', { method: 'POST', body: form })
+    return request('/analyze', { method: 'POST', headers, body: form })
   }
   return request('/analyze', {
     method: 'POST',
+    headers,
     body: JSON.stringify({ text: payload.text || '' }),
   })
 }

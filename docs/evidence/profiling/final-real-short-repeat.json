@@ -1,0 +1,320 @@
+{
+  "scenario": "text",
+  "short_fixture": true,
+  "dry_run": false,
+  "demo_requested": false,
+  "limit_seconds": 90,
+  "model": "gpt-6.1-sol",
+  "reasoning_effort": "medium",
+  "quality_review": true,
+  "fixture": "synthetic data, real cloud, temporary database",
+  "measured_scope": "TestClient -> real /analyze -> full response; excludes browser rendering",
+  "text_chars": 118,
+  "text_messages": 4,
+  "image_bytes": 85960,
+  "image_dimensions": [
+    900,
+    1320
+  ],
+  "input_sha256": "60615b7422fe472b3ccd99c20b114ee7743a0c99abd4a1fd1715d2afca6591e6",
+  "analysis_prompt_chars": 2641,
+  "cached_repeat": true,
+  "status": 200,
+  "complete": true,
+  "response": {
+    "id": 2,
+    "requirements": [
+      {
+        "field": "采购数量",
+        "value": "150件",
+        "evidence": "需要150件纯棉文化衫"
+      },
+      {
+        "field": "产品及材质",
+        "value": "纯棉文化衫",
+        "evidence": "需要150件纯棉文化衫"
+      },
+      {
+        "field": "预算上限",
+        "value": "6000元",
+        "evidence": "预算上限6000元"
+      },
+      {
+        "field": "交货要求",
+        "value": "2026年11月20日前交货",
+        "evidence": "请2026年11月20日前交货"
+      },
+      {
+        "field": "报价审批要求",
+        "value": "具体报价要我主管审批",
+        "evidence": "具体报价要我主管审批"
+      }
+    ],
+    "questions": [
+      {
+        "question": "文化衫的款式、尺码分配及印制要求分别是什么？",
+        "initial_guess": "已确认数量及纯棉材质，款式、尺码分配和印制要求尚未提供。",
+        "related_ddl_index": null,
+        "status": "pending",
+        "confirmed_answer": null
+      },
+      {
+        "question": "6000元预算需要包含哪些费用？",
+        "initial_guess": "预算上限为6000元，是否包含税费、印制及运费尚不明确。",
+        "related_ddl_index": null,
+        "status": "pending",
+        "confirmed_answer": null
+      },
+      {
+        "question": "交货地点在哪里，核实产能后能否满足2026年11月20日前交货的要求？",
+        "initial_guess": "客户要求2026年11月20日前交货，商家尚需核实产能，交货地点也未提供。",
+        "related_ddl_index": 0,
+        "status": "pending",
+        "confirmed_answer": null
+      },
+      {
+        "question": "主管审批报价需要哪些材料，预计需要多长时间？",
+        "initial_guess": "具体报价需主管审批，审批时长和所需材料未知。",
+        "related_ddl_index": null,
+        "status": "pending",
+        "confirmed_answer": null
+      }
+    ],
+    "tasks": [],
+    "reply": "陈先生，收到：您需要150件纯棉文化衫，预算上限6000元，要求2026年11月20日前交货，具体报价需主管审批。交期仍需核实产能后确认。请补充款式、尺码分配、印制要求和交货地点，并说明预算是否包含税费及运费、主管审批所需材料与时间。",
+    "is_sample": false,
+    "analysis_version": 2,
+    "ddl_tasks": [
+      {
+        "title": "按客户要求完成交货（交期尚未承诺）",
+        "ddl_date": "2026-11-20",
+        "start_date": null,
+        "source_quote": "请2026年11月20日前交货",
+        "date_basis": "explicit"
+      }
+    ],
+    "suggested_tasks": [
+      {
+        "title": "了解供应商比较标准，准备有针对性的方案说明",
+        "reason": "客户正在比较其他供应商，尚未说明比较标准。",
+        "priority": "high"
+      }
+    ],
+    "action_states": {}
+  },
+  "elapsed_ms": 51.022,
+  "timings": {
+    "request.total": {
+      "calls": 1,
+      "duration_ms": 50.37,
+      "exclusive_ms": 14.017,
+      "unfinished": 0
+    },
+    "request.authentication": {
+      "calls": 1,
+      "duration_ms": 2.816,
+      "exclusive_ms": 2.816,
+      "unfinished": 0
+    },
+    "request.handler": {
+      "calls": 1,
+      "duration_ms": 33.537,
+      "exclusive_ms": 3.447,
+      "unfinished": 0
+    },
+    "request.body_receive": {
+      "calls": 2,
+      "duration_ms": 2.879,
+      "exclusive_ms": 2.042,
+      "unfinished": 0
+    },
+    "request.parse_json": {
+      "calls": 1,
+      "duration_ms": 0.452,
+      "exclusive_ms": 0.452,
+      "unfinished": 0
+    },
+    "request.schema_validation": {
+      "calls": 1,
+      "duration_ms": 0.641,
+      "exclusive_ms": 0.641,
+      "unfinished": 0
+    },
+    "request.normalize": {
+      "calls": 1,
+      "duration_ms": 0.461,
+      "exclusive_ms": 0.461,
+      "unfinished": 0
+    },
+    "analysis_and_save": {
+      "calls": 1,
+      "duration_ms": 26.495,
+      "exclusive_ms": 7.012,
+      "unfinished": 0
+    },
+    "ai.settings": {
+      "calls": 2,
+      "duration_ms": 1.609,
+      "exclusive_ms": 1.609,
+      "unfinished": 0
+    },
+    "ai.schema_validation": {
+      "calls": 1,
+      "duration_ms": 0.471,
+      "exclusive_ms": 0.471,
+      "unfinished": 0
+    },
+    "result.schema_validation": {
+      "calls": 1,
+      "duration_ms": 0.508,
+      "exclusive_ms": 0.508,
+      "unfinished": 0
+    },
+    "database.transaction_total": {
+      "calls": 1,
+      "duration_ms": 14.076,
+      "exclusive_ms": 12.755,
+      "unfinished": 0
+    },
+    "database.calendar_sync": {
+      "calls": 1,
+      "duration_ms": 0.463,
+      "exclusive_ms": 0.463,
+      "unfinished": 0
+    },
+    "database.profile_and_snapshot": {
+      "calls": 1,
+      "duration_ms": 0.859,
+      "exclusive_ms": 0.859,
+      "unfinished": 0
+    },
+    "database.profile_lookup": {
+      "calls": 1,
+      "duration_ms": 2.819,
+      "exclusive_ms": 2.819,
+      "unfinished": 0
+    }
+  },
+  "spans": [
+    {
+      "id": 1,
+      "parent": null,
+      "phase": "request.total",
+      "start_ms": 0.007599999662488699,
+      "duration_ms": 50.37049998645671
+    },
+    {
+      "id": 2,
+      "parent": 1,
+      "phase": "request.authentication",
+      "start_ms": 2.1265999821480364,
+      "duration_ms": 2.816399995936081
+    },
+    {
+      "id": 3,
+      "parent": 1,
+      "phase": "request.handler",
+      "start_ms": 5.866799998329952,
+      "duration_ms": 33.53739998419769
+    },
+    {
+      "id": 4,
+      "parent": 3,
+      "phase": "request.body_receive",
+      "start_ms": 6.379099999321625,
+      "duration_ms": 2.0423999812919647
+    },
+    {
+      "id": 5,
+      "parent": 4,
+      "phase": "request.body_receive",
+      "start_ms": 6.843399984063581,
+      "error_type": "GeneratorExit",
+      "duration_ms": 0.836499995784834
+    },
+    {
+      "id": 6,
+      "parent": 3,
+      "phase": "request.parse_json",
+      "start_ms": 8.839599991915748,
+      "duration_ms": 0.45190000673756003
+    },
+    {
+      "id": 7,
+      "parent": 3,
+      "phase": "request.schema_validation",
+      "start_ms": 9.948499995516613,
+      "duration_ms": 0.6408999906852841
+    },
+    {
+      "id": 8,
+      "parent": 3,
+      "phase": "request.normalize",
+      "start_ms": 11.120099981781095,
+      "duration_ms": 0.4607000155374408
+    },
+    {
+      "id": 9,
+      "parent": 3,
+      "phase": "analysis_and_save",
+      "start_ms": 12.058499996783212,
+      "duration_ms": 26.494599995203316
+    },
+    {
+      "id": 10,
+      "parent": 9,
+      "phase": "ai.settings",
+      "start_ms": 12.456899974495173,
+      "duration_ms": 0.7914000016171485
+    },
+    {
+      "id": 11,
+      "parent": 9,
+      "phase": "ai.schema_validation",
+      "start_ms": 15.280399995390326,
+      "duration_ms": 0.47149998135864735
+    },
+    {
+      "id": 12,
+      "parent": 9,
+      "phase": "result.schema_validation",
+      "start_ms": 16.18779997806996,
+      "duration_ms": 0.5077999958302826
+    },
+    {
+      "id": 13,
+      "parent": 9,
+      "phase": "database.transaction_total",
+      "start_ms": 17.409699998097494,
+      "duration_ms": 14.075999992201105
+    },
+    {
+      "id": 14,
+      "parent": 13,
+      "phase": "database.calendar_sync",
+      "start_ms": 21.151799999643117,
+      "duration_ms": 0.46259997179731727
+    },
+    {
+      "id": 15,
+      "parent": 13,
+      "phase": "database.profile_and_snapshot",
+      "start_ms": 22.057299996959046,
+      "duration_ms": 0.8587999909650534
+    },
+    {
+      "id": 16,
+      "parent": 9,
+      "phase": "database.profile_lookup",
+      "start_ms": 32.41599997272715,
+      "duration_ms": 2.818500011926517
+    },
+    {
+      "id": 17,
+      "parent": 9,
+      "phase": "ai.settings",
+      "start_ms": 35.83849998540245,
+      "duration_ms": 0.8175999973900616
+    }
+  ]
+}

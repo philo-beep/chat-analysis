@@ -1,6 +1,6 @@
 <!-- 聊天输入，A 负责 -->
 <script setup>
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import AppIcon from './AppIcon.vue'
 
 const props = defineProps({
@@ -15,6 +15,8 @@ const imageUrl = ref('')
 const inputError = ref('')
 const fillingScreenshot = ref(false)
 const demoNotice = ref('')
+const demoKind = ref('')
+const demoImage = ref(null)
 let screenshotController = null
 
 const demoText = `甲方（客户/需求方）：我们准备举办一次团队活动，想定制100件文化衫，总预算3000元。先沟通需求和可行方案，暂时不要安排生产。
@@ -64,9 +66,21 @@ const demoText = `甲方（客户/需求方）：我们准备举办一次团队�
 甲方（客户/需求方）：请先发本次沟通纪要和待办清单给我们核对。我们按清单推进，遇到遗漏再补充，正式确认之前暂不下达生产指令。
 乙方（商家/执行方）：好的，我会整理已确认事项、双方待办、截止节点、依赖和待确认问题供您核对；下一步先落实素材、设计报价和生产物流可行性，再依次推进评审与执行。`
 
+const fixedDemo = computed(() => {
+  if (customerName.value !== '演示客户') return false
+  if (demoKind.value === 'text') return !image.value && text.value === demoText
+  if (demoKind.value === 'image') return image.value === demoImage.value && !text.value
+  return false
+})
+const fixedDemoNotice = computed(() => fixedDemo.value
+  ? `${demoKind.value === 'image' ? '已填入虚构的客户与商家聊天截图。' : ''}演示结果：此固定样例使用经过校验的预置分析，无需等待。修改聊天、截图或客户名称后，将重新进行真实分析。样例中的固定日期以原文为准，推算日期请核对。`
+  : demoKind.value ? '样例内容已修改，将重新进行真实分析。' : '')
+
 function setImage(file) {
   inputError.value = ''
   demoNotice.value = ''
+  demoKind.value = ''
+  demoImage.value = null
   if (!file) return
   const mime = file.type.toLowerCase()
   const supported = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'].includes(mime)
@@ -103,6 +117,7 @@ function fillDemo() {
   removeImage()
   customerName.value = '演示客户'
   text.value = demoText
+  demoKind.value = 'text'
   inputError.value = ''
 }
 
@@ -122,6 +137,8 @@ async function fillScreenshotDemo() {
     setImage(new File([blob], '买卖双方聊天-演示样例.png', { type: 'image/png' }))
     customerName.value = '演示客户'
     text.value = ''
+    demoKind.value = 'image'
+    demoImage.value = image.value
     demoNotice.value = '已填入虚构的客户与商家聊天截图，点击“开始分析”即可体验。'
   } catch {
     if (screenshotController === controller) inputError.value = '截图样例暂时没加载出来，请再试一次。原有内容已保留。'
@@ -159,11 +176,13 @@ function submit() {
   inputError.value = ''
   const name = customerName.value.trim().replace(/[\r\n]+/g, ' ')
   const originalText = name ? `客户名称：${name}\n${text.value}` : text.value
-  emit('submit', { text: originalText, image: image.value })
+  emit('submit', { text: originalText, image: image.value, demo: fixedDemo.value })
 }
 
 function removeImage() {
   demoNotice.value = ''
+  demoKind.value = ''
+  demoImage.value = null
   image.value = null
   if (imageUrl.value) URL.revokeObjectURL(imageUrl.value)
   imageUrl.value = ''
@@ -212,7 +231,7 @@ function clear() {
       <span class="hint">PNG / JPG / WebP · 最大 10 MiB</span>
     </div>
     <img v-if="imageUrl" class="preview" :src="imageUrl" alt="聊天截图预览" />
-    <p v-if="demoNotice" class="hint demo-notice" role="status">{{ demoNotice }}</p>
+    <p v-if="fixedDemoNotice || demoNotice" class="hint demo-notice" role="status">{{ fixedDemoNotice || demoNotice }}</p>
     <p v-if="inputError" class="input-error" role="alert">{{ inputError }}</p>
     <div class="actions">
       <button type="button" class="primary" :disabled="props.loading || fillingScreenshot" @click="submit">
