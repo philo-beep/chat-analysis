@@ -24,7 +24,7 @@ def criteria(case_id, result):
     def values(field):
         return ' '.join(r['value'] for r in facts if field in r['field']).replace(' ', '')
     all_values = ' '.join(r['value'] for r in facts).replace(' ', '')
-    questions = ' '.join(result['questions'])
+    questions = ' '.join(item if isinstance(item, str) else item['question'] + ' ' + item['initial_guess'] for item in result['questions'])
     checks = {'real_source': result['is_sample'] is False}
     if case_id == 'normal':
         checks.update(quantity='100' in values('数量'), budget='3000' in values('预算'),
@@ -45,8 +45,12 @@ def criteria(case_id, result):
         checks.update(budget_pending='3000' in questions and '5000' in questions,
                       no_final_budget=not any('预算' in r['field'] and not any(k in r['value'] for k in ['待确认','歧义','未确认']) for r in facts))
     elif case_id == 'deadline':
-        checks.update(explicit_deadline=any('DDL:2026-10-25' in task.replace(' ', '') and '初稿' in task for task in result['tasks']),
-                      unscheduled_task=any('尺码' in task and 'DDL:' not in task for task in result['tasks']))
+        if 'ddl_tasks' in result:
+            checks.update(explicit_deadline=any(task['ddl_date'] == '2026-10-25' and '初稿' in task['title'] for task in result['ddl_tasks']),
+                          unscheduled_task=any('尺码' in task for task in result['tasks']) or any('尺码' in task['title'] for task in result['suggested_tasks']))
+        else:
+            checks.update(explicit_deadline=any('DDL:2026-10-25' in task.replace(' ', '') and '初稿' in task for task in result['tasks']),
+                          unscheduled_task=any('尺码' in task and 'DDL:' not in task for task in result['tasks']))
     elif case_id == 'roles':
         checks.update(final_150='150' in values('数量') and '100' not in values('数量'),
                       cotton='纯棉' in all_values, unit_budget=any('40' in r['value'] and any(k in r['field']+r['value'] for k in ['单','每件','/件','一件']) for r in facts),
@@ -87,6 +91,16 @@ def run(images=False, case_ids=None):
                             checks = criteria(case['id'], body)
                             checks['grounded_evidence'] = all(r['evidence'] in record['text'] for r in body['requirements'])
                             if case['id'] == 'deadline':
+                                if body.get('analysis_version') == 2:
+                                    actions = [('add_ddl_task', 'ddl_tasks', index) for index in range(len(body['ddl_tasks']))]
+                                    actions += [('accept_suggestion', kind, index) for kind in ('tasks', 'suggested_tasks') for index in range(len(body[kind]))]
+                                    for action, kind, index in actions:
+                                        current = client.get(f"/records/{body['id']}").json()['result']
+                                        payload = {'action': action, 'index': index, 'expected_result': current}
+                                        if kind != 'ddl_tasks': payload['kind'] = kind
+                                        response_action = client.post(f"/api/records/{body['id']}/actions", json=payload)
+                                        if response_action.status_code != 200:
+                                            raise RuntimeError('Acceptance action failed: ' + response_action.text)
                                 scheduled = client.get('/api/calendar/items?scheduled=true').json()['data']['items']
                                 pool = client.get('/api/calendar/items?scheduled=false').json()['data']['items']
                                 checks['deadline_synced'] = any(item['due_date'] == '2026-10-25' and '初稿' in item['title'] for item in scheduled)
