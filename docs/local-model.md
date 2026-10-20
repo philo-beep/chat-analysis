@@ -1,5 +1,7 @@
 # AI 模块运行配置
 
+当前分析已扩展为七字段，保留原有需求、待办与回复。请求严格 JSON Schema，并以 Pydantic 和原文检查作为最终兜底；格式错误最多修复重试一次。人物画像只由后端持久化。详见 [扩展分析与验收](expanded-ai-delivery.md)。
+
 项目后端使用 backend/ai_service.py 调用兼容 OpenAI Chat Completions 的云端模型，文本分析与截图转录均由该服务完成。请在 backend/.env 配置 FOLLOWUP_API_KEY、FOLLOWUP_BASE_URL、FOLLOWUP_MODEL 和 FOLLOWUP_REASONING_EFFORT；.env 已被 Git 忽略，不应提交。
 
 截图仅用于聊天内容转录，转录文本会再进入同一分析流程。图片和聊天原文会发送到配置的模型服务，处理前应确认内容允许交由该服务处理。API Key 不写入源代码、日志、响应或仓库。

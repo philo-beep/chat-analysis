@@ -1,0 +1,71 @@
+{
+  "scenario": "short",
+  "source": "客户：在吗\n商家：在的，什么事",
+  "fixture": "synthetic chat, temporary DB, real cloud model",
+  "raw_completions": [
+    {
+      "seconds": 3.66,
+      "json": {
+        "customer_profile": {
+          "communication_preferences": [],
+          "company": "未知",
+          "concerns": [],
+          "decision_style": "未知",
+          "display_name": "未知",
+          "industry": "未知",
+          "next_follow_up": "未知",
+          "risk_points": [],
+          "role": "未知"
+        },
+        "ddl_tasks": [],
+        "questions": [],
+        "reply": "在的，请问有什么可以帮您？",
+        "requirements": [],
+        "suggested_tasks": [],
+        "tasks": []
+      }
+    }
+  ],
+  "status": 200,
+  "response": {
+    "id": 1,
+    "requirements": [],
+    "questions": [],
+    "tasks": [],
+    "reply": "在的，请问有什么可以帮您？",
+    "is_sample": false,
+    "analysis_version": 2,
+    "ddl_tasks": [],
+    "suggested_tasks": [],
+    "action_states": {}
+  },
+  "profile_query": [
+    {
+      "id": 1,
+      "owner_id": 1,
+      "identity_key": "temporary:record:1",
+      "display_name": "未知",
+      "role": "未知",
+      "company": "未知",
+      "industry": "未知",
+      "concerns_json": "[]",
+      "decision_style": "未知",
+      "communication_preferences_json": "[]",
+      "risk_points_json": "[]",
+      "next_follow_up": "未知",
+      "created_at": "2026-10-20T05:32:52.026755+00:00",
+      "updated_at": "2026-10-20T05:32:52.026755+00:00"
+    }
+  ],
+  "snapshot_query": [
+    {
+      "id": 1,
+      "profile_id": 1,
+      "source_record_id": 1,
+      "snapshot_json": "{\"display_name\": \"未知\", \"role\": \"未知\", \"company\": \"未知\", \"industry\": \"未知\", \"concerns\": [], \"decision_style\": \"未知\", \"communication_preferences\": [], \"risk_points\": [], \"next_follow_up\": \"未知\"}",
+      "created_at": "2026-10-20T05:32:52.026755+00:00"
+    }
+  ],
+  "passed": true,
+  "seconds": 3.87
+}
