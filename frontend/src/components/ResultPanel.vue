@@ -1,7 +1,7 @@
 <!-- 结果与编辑，B 负责 -->
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { exportRecordData, getRecord, saveRecord, trackCopy } from '../api.js'
+import { actOnRecord, exportRecordData, getRecord, saveRecord, trackCopy } from '../api.js'
 import AppIcon from './AppIcon.vue'
 
 const props = defineProps({
@@ -20,12 +20,26 @@ const busy = ref(false)
 const message = ref('')
 const error = ref('')
 const operationVersion = ref(0)
+const questionAnswers = ref({})
 const locked = computed(() => busy.value || props.disabled)
 const dirty = computed(() => draft.value && JSON.stringify(draft.value) !== savedSnapshot.value)
+const hasExpandedResult = computed(() => Array.isArray(draft.value?.ddl_tasks) || Array.isArray(draft.value?.suggested_tasks))
+const suggestionCount = computed(() => (draft.value?.tasks?.length || 0) + (draft.value?.suggested_tasks?.length || 0))
+const priorityLabel = { high: '高', medium: '中', low: '低' }
+
+function legacyTaskState(index) {
+  return draft.value?.action_states?.[String(index)] || { status: 'pending' }
+}
+
+function statusText(status) {
+  return { accepted: '已采纳', ignored: '已忽略', added: '已加入日历', confirmed: '已确认' }[status] || ''
+}
 
 function setDraft(value) {
   draft.value = value ? JSON.parse(JSON.stringify(value)) : null
+  if (draft.value) delete draft.value.id
   savedSnapshot.value = JSON.stringify(draft.value)
+  questionAnswers.value = Object.fromEntries((draft.value?.questions || []).map((item, index) => [index, typeof item === 'object' ? item.confirmed_answer || item.initial_guess || '' : '']))
 }
 
 watch(() => [props.result, props.recordId], () => {
@@ -38,6 +52,7 @@ function clearSessionState() {
   operationVersion.value += 1
   draft.value = null
   savedSnapshot.value = ''
+  questionAnswers.value = {}
   message.value = ''
   error.value = ''
   if (busy.value) setBusy(false)
@@ -89,6 +104,40 @@ async function save() {
     }
   } catch (e) {
     if (isCurrent(version, id)) error.value = e instanceof Error ? e.message : '保存失败，请重试'
+  } finally {
+    if (isCurrent(version, id)) setBusy(false)
+  }
+}
+
+async function performAction(action, index, source = null, answer = null) {
+  if (locked.value) return
+  const values = action === 'confirm_question' ? draft.value.questions : action === 'add_ddl_task' ? draft.value.ddl_tasks : draft.value[source]
+  const item = values?.[index]
+  const title = typeof item === 'string' ? item : item?.title || item?.question
+  if (!title?.trim()) { error.value = '请先填写完整内容'; return }
+  if (action === 'confirm_question' && !answer?.trim()) { error.value = '请填写确认答案'; return }
+  const version = ++operationVersion.value
+  const id = props.recordId
+  error.value = ''; message.value = ''
+  setBusy(true)
+  try {
+    validate()
+    if (dirty.value && !(await persist(version, id))) return
+    const expected = JSON.parse(JSON.stringify(draft.value))
+    delete expected.id
+    const payload = { action, index, expected_result: expected }
+    if (source) payload.kind = source
+    if (answer !== null) payload.answer = answer.trim()
+    await actOnRecord(id, payload)
+    if (!isCurrent(version, id)) return
+    const record = await getRecord(id)
+    if (!isCurrent(version, id)) return
+    if (!record.result) throw new Error('操作已提交，请重新打开这份聊天核对结果')
+    setDraft(record.result)
+    emit('saved', record)
+    message.value = action === 'add_ddl_task' ? '已加入日历，可在日程计划查看' : action === 'accept_suggestion' ? '已加入待办池，可在日程计划安排时间' : action === 'ignore_suggestion' ? '已忽略这条建议' : '答案已确认并保存'
+  } catch (e) {
+    if (isCurrent(version, id)) error.value = e instanceof Error ? e.message : '操作失败，请重试'
   } finally {
     if (isCurrent(version, id)) setBusy(false)
   }
@@ -156,7 +205,7 @@ async function exportJson() {
       开发样例：以下为示例数据，不是真实模型分析，请核对原文后使用。
     </p>
     <p v-else-if="draft.is_sample !== false" class="hint">旧记录未标注分析来源，请核对原文。</p>
-    <div class="result-overview"><div><span>已梳理需求</span><strong>{{ draft.requirements.length }}<small>项</small></strong></div><div><span>待确认问题</span><strong>{{ draft.questions.length }}<small>项</small></strong></div><div><span>建议待办</span><strong>{{ draft.tasks.length }}<small>项</small></strong></div></div>
+    <div class="result-overview"><div><span>已梳理需求</span><strong>{{ draft.requirements.length }}<small>项</small></strong></div><div><span>待确认问题</span><strong>{{ draft.questions.length }}<small>项</small></strong></div><div><span>建议待办</span><strong>{{ suggestionCount }}<small>项</small></strong></div></div>
     <details :key="`${sessionKey}:${recordId}`" class="original">
       <summary>原始聊天记录（用于核对依据）<span class="original-toggle"><span class="when-closed">展开原文</span><span class="when-open">收起原文</span></span></summary>
       <div class="original-content" tabindex="0" aria-label="原始聊天记录，可滚动查看完整内容">
@@ -190,24 +239,64 @@ async function exportJson() {
       <div class="followup-grid"><section class="followup-block">
       <h3><span class="section-number">02</span>待确认问题</h3>
       <p class="hint">这些信息需要向客户询问，尚未确认。</p>
-      <div v-for="(_, index) in draft.questions" :key="index" class="list-row">
-        <input v-model="draft.questions[index]" :aria-label="`待确认问题 ${index + 1}`" />
-        <button type="button" class="ghost" @click="draft.questions.splice(index, 1)">删除问题</button>
+      <div v-for="(question, index) in draft.questions" :key="index" :class="typeof question === 'string' ? 'list-row' : 'analysis-item'">
+        <template v-if="typeof question === 'string'">
+          <input v-model="draft.questions[index]" :aria-label="`待确认问题 ${index + 1}`" />
+          <button type="button" class="ghost" @click="draft.questions.splice(index, 1)">删除问题</button>
+        </template>
+        <template v-else>
+          <label :for="`question-${recordId}-${index}`">{{ question.question }}</label>
+          <p v-if="question.status !== 'confirmed'" class="hint">初步判断：{{ question.initial_guess }}</p>
+          <p v-else class="confirmed-answer">已确认：{{ question.confirmed_answer }}</p>
+          <label class="hint" :for="`question-${recordId}-${index}`">{{ question.status === 'confirmed' ? '修改答案' : '请确认或修改答案' }}</label>
+          <input :id="`question-${recordId}-${index}`" v-model="questionAnswers[index]" :aria-label="`问题 ${index + 1} 的答案`" />
+          <div class="item-actions"><button type="button" class="ghost" @click="performAction('confirm_question', index, null, questionAnswers[index])">{{ question.status === 'confirmed' ? '修改确认' : '确认答案' }}</button></div>
+        </template>
       </div>
       <p v-if="!draft.questions.length" class="hint">暂无待确认问题</p>
       <button type="button" class="ghost" @click="draft.questions.push('')">添加问题</button>
       </section><section class="followup-block">
       <h3><span class="section-number">03</span>建议待办</h3>
       <p class="hint">供商家安排下一步，不代表已经向客户作出承诺。</p>
-      <div v-for="(_, index) in draft.tasks" :key="index" class="list-row">
+      <div v-for="(_, index) in draft.tasks" :key="`ordinary-${index}`" class="analysis-item">
+        <span v-if="hasExpandedResult" class="item-kind">普通建议</span>
+        <div class="list-row">
         <input v-model="draft.tasks[index]" :aria-label="`建议待办 ${index + 1}`" />
         <button type="button" class="ghost" @click="draft.tasks.splice(index, 1)">删除待办</button>
+        </div>
+        <div class="item-actions">
+          <span v-if="statusText(legacyTaskState(index).status)" class="hint">{{ statusText(legacyTaskState(index).status) }}</span>
+          <button type="button" class="ghost" :disabled="legacyTaskState(index).status === 'accepted'" @click="performAction('accept_suggestion', index, 'tasks')">采纳</button>
+          <button type="button" class="ghost" :disabled="legacyTaskState(index).status === 'ignored' || legacyTaskState(index).status === 'accepted'" @click="performAction('ignore_suggestion', index, 'tasks')">忽略</button>
+        </div>
       </div>
-      <p v-if="!draft.tasks.length" class="hint">暂无建议待办</p>
+      <div v-for="(item, index) in draft.suggested_tasks || []" :key="`suggested-${index}`" class="analysis-item">
+        <div class="suggestion-title"><strong>{{ item.title }}</strong><span class="priority" :class="item.priority">{{ priorityLabel[item.priority] || item.priority }}优先</span></div>
+        <p class="hint">建议理由：{{ item.reason }}</p>
+        <div class="item-actions">
+          <span v-if="statusText(item.status)" class="hint">{{ statusText(item.status) }}</span>
+          <button type="button" class="ghost" :disabled="item.status === 'accepted'" @click="performAction('accept_suggestion', index, 'suggested_tasks')">采纳</button>
+          <button type="button" class="ghost" :disabled="item.status === 'ignored' || item.status === 'accepted'" @click="performAction('ignore_suggestion', index, 'suggested_tasks')">忽略</button>
+        </div>
+      </div>
+      <p v-if="!suggestionCount" class="hint">暂无建议待办</p>
       <button type="button" class="ghost" @click="draft.tasks.push('')">添加待办</button>
       </section></div>
       <h3><span class="section-number">04</span><label for="reply-draft">回复草稿</label></h3>
       <textarea id="reply-draft" v-model="draft.reply" rows="4" />
+
+      <section v-if="Array.isArray(draft.ddl_tasks)" class="ddl-section" aria-label="有截止日期的任务">
+        <h3><span class="section-number">05</span>有 DDL 的任务</h3>
+        <p class="hint">核对时间和原话后加入日历，助手会按剩余时间显示紧迫程度。</p>
+        <div v-for="(item, index) in draft.ddl_tasks" :key="index" class="analysis-item">
+          <strong>{{ item.title }}</strong>
+          <label class="deadline">截止日期 <input type="date" v-model="item.ddl_date" :aria-label="`任务 ${index + 1} 截止日期`" :disabled="item.status === 'added'" /></label><span v-if="item.date_basis === 'inferred'" class="inferred">推算日期，待确认</span>
+          <p v-if="item.start_date" class="hint">开始日期：{{ item.start_date }}</p>
+          <blockquote>{{ item.source_quote }}</blockquote>
+          <div class="item-actions"><span v-if="item.status === 'added'" class="hint">已加入日历</span><button type="button" class="ghost" :disabled="item.status === 'added'" @click="performAction('add_ddl_task', index)">加入日历</button></div>
+        </div>
+        <p v-if="!draft.ddl_tasks.length" class="hint">这份聊天里暂时没有约定明确时间的任务</p>
+      </section>
     </fieldset>
 
     <p v-if="dirty" class="unsaved" role="status">有未保存修改。导出时将先保存；切换记录前请先保存。</p>
@@ -274,6 +363,20 @@ td textarea { min-height: 57px; }
 .followup-block .ghost { font-size: 11px; padding: 5px 8px; min-height: 30px; }
 .list-row { display: flex; align-items: start; gap: 6px; margin-bottom: 8px; }
 .list-row button { flex-shrink: 0; }
+.analysis-item { padding: 12px; margin-bottom: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); overflow-wrap: anywhere; }
+.analysis-item > label:first-child, .analysis-item strong { display: block; font-size: 12px; line-height: 1.8; }
+.analysis-item .hint { font-size: 11px; line-height: 1.8; margin: 6px 0; }
+.item-kind { display: inline-block; color: var(--muted); font-size: 10px; margin-bottom: 6px; }
+.item-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.suggestion-title { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.priority { border-radius: 5px; padding: 3px 6px; font-size: 10px; white-space: nowrap; background: #eef2e7; color: #536647; }
+.priority.high { background: #fce9e5; color: #a63f32; }
+.priority.medium { background: #fff3d8; color: #8a641e; }
+.priority.low { background: #edf2e8; color: #536647; }
+.deadline { font-size: 12px; color: var(--ink); margin: 8px 0; }
+.inferred { display: inline-block; color: #8a641e; background: #fff3d8; border-radius: 4px; padding: 2px 5px; font-size: 10px; }
+.confirmed-answer { color: #48633d; font-size: 12px; }
+blockquote { border-left: 3px solid var(--line); padding: 4px 10px; margin: 8px 0; color: var(--muted); font-size: 12px; line-height: 1.8; }
 .actions { margin-top: 22px; padding-top: 21px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 9px; }
 .success, .error { margin: 15px 0 0; }
 .unsaved { color: #82692e; font-size: 12px; margin: 16px 0 0; }

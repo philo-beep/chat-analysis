@@ -160,6 +160,13 @@ export function saveRecord(id, result) {
   })
 }
 
+// 所有采纳和确认操作由后端原子保存，避免重复创建日程或待办。
+export function actOnRecord(id, action) {
+  return authRequest(`/api/records/${id}/actions`, {
+    method: 'POST', body: JSON.stringify(action),
+  })
+}
+
 export function exportRecord(id) {
   return `${BASE_URL}/records/${id}/export`
 }

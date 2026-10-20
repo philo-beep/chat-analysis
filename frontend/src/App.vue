@@ -14,7 +14,7 @@ import ScreenshotList from './components/ScreenshotList.vue'
 import CalendarPanel from './components/CalendarPanel.vue'
 import { directorySections, hashForSection, routeFromHash, sectionFromHash } from './navigation.js'
 import { buildRecordViews, loadRecordDetails } from './recordViews.js'
-import { analyze, getRecord, listRecords, deleteRecord, getCurrentUser, logout, trackPageView, importCalendarTask } from './api.js'
+import { actOnRecord, analyze, getRecord, listRecords, deleteRecord, getCurrentUser, logout, trackPageView, importCalendarTask } from './api.js'
 import { currentUser, sessionVersion, getAuthToken, establishSession, restoreSessionUser, clearSession } from './auth.js'
 
 const inputArea = ref(null)
@@ -109,7 +109,25 @@ async function addSuggestionToCalendar(item) {
   calendarImportMessage.value = ''
   calendarImportError.value = ''
   try {
-    const task = await importCalendarTask({ record_id: item.recordId, task_index: item.taskIndex, expected_text: item.text })
+    let task
+    if (item.kind === 'suggested_tasks' || item.kind === 'ddl_tasks' || item.expanded) {
+      const source = await getRecord(item.recordId)
+      if (!isCurrent(version)) return
+      const action = await actOnRecord(item.recordId, {
+        action: item.kind === 'ddl_tasks' ? 'add_ddl_task' : 'accept_suggestion',
+        ...(item.kind !== 'ddl_tasks' ? { kind: item.kind || 'tasks' } : {}),
+        index: item.taskIndex, expected_result: source.result,
+      })
+      task = action.item
+      const record = await getRecord(item.recordId)
+      if (!isCurrent(version)) return
+      directoryCache.set(record.id, { updatedAt: record.updated_at, record })
+      directoryRecords.value = directoryRecords.value.map((entry) => entry.id === record.id ? record : entry)
+      if (scopedRecord.value?.id === record.id) scopedRecord.value = record
+      if (recordId.value === record.id) showRecord(record)
+    } else {
+      task = await importCalendarTask({ record_id: item.recordId, task_index: item.taskIndex, expected_text: item.text })
+    }
     if (isCurrent(version)) calendarImportMessage.value = task.completed
       ? `「${task.title}」已存在于日程计划的已完成列表，可在那里重新打开。`
       : task.due_date ? `「${task.title}」已排期，可在日程计划查看；重复点击不会重复创建。`
