@@ -1,0 +1,436 @@
+{
+  "scenario": "text",
+  "dry_run": true,
+  "limit_seconds": 15,
+  "model": "gpt-6.1-sol",
+  "reasoning_effort": "medium",
+  "quality_review": true,
+  "fixture": "current built-in demo, synthetic data, real cloud, temporary database",
+  "measured_scope": "TestClient -> real /analyze -> full response; excludes browser rendering",
+  "text_chars": 3279,
+  "text_messages": 46,
+  "image_bytes": 85960,
+  "image_dimensions": [
+    900,
+    1320
+  ],
+  "input_sha256": "557f0d8ae02730a0611ff11aebe2f9fc1ebaa69457f17a4e0a957b4d5b6abcbf",
+  "analysis_prompt_chars": 2504,
+  "status": 200,
+  "complete": true,
+  "result_keys": [
+    "id",
+    "requirements",
+    "questions",
+    "tasks",
+    "reply",
+    "is_sample",
+    "analysis_version",
+    "ddl_tasks",
+    "suggested_tasks",
+    "action_states"
+  ],
+  "saved_records": 1,
+  "elapsed_ms": 87.183,
+  "timings": {
+    "request.total": {
+      "calls": 1,
+      "duration_ms": 84.505,
+      "exclusive_ms": 27.117,
+      "unfinished": 0
+    },
+    "request.authentication": {
+      "calls": 1,
+      "duration_ms": 3.469,
+      "exclusive_ms": 3.469,
+      "unfinished": 0
+    },
+    "request.handler": {
+      "calls": 1,
+      "duration_ms": 53.919,
+      "exclusive_ms": 4.527,
+      "unfinished": 0
+    },
+    "request.body_receive": {
+      "calls": 2,
+      "duration_ms": 3.363,
+      "exclusive_ms": 2.461,
+      "unfinished": 0
+    },
+    "request.parse_json": {
+      "calls": 1,
+      "duration_ms": 0.625,
+      "exclusive_ms": 0.625,
+      "unfinished": 0
+    },
+    "request.schema_validation": {
+      "calls": 1,
+      "duration_ms": 0.648,
+      "exclusive_ms": 0.648,
+      "unfinished": 0
+    },
+    "request.normalize": {
+      "calls": 1,
+      "duration_ms": 0.725,
+      "exclusive_ms": 0.725,
+      "unfinished": 0
+    },
+    "analysis_and_save": {
+      "calls": 1,
+      "duration_ms": 44.934,
+      "exclusive_ms": 3.63,
+      "unfinished": 0
+    },
+    "ai.settings": {
+      "calls": 1,
+      "duration_ms": 1.461,
+      "exclusive_ms": 1.461,
+      "unfinished": 0
+    },
+    "ai.analysis_pipeline": {
+      "calls": 1,
+      "duration_ms": 26.383,
+      "exclusive_ms": 6.863,
+      "unfinished": 0
+    },
+    "ai.prompt_load": {
+      "calls": 1,
+      "duration_ms": 0.872,
+      "exclusive_ms": 0.872,
+      "unfinished": 0
+    },
+    "ai.schema_prepare": {
+      "calls": 1,
+      "duration_ms": 3.855,
+      "exclusive_ms": 3.855,
+      "unfinished": 0
+    },
+    "ai.identity_pipeline": {
+      "calls": 1,
+      "duration_ms": 5.941,
+      "exclusive_ms": 4.161,
+      "unfinished": 0
+    },
+    "cloud.identity": {
+      "calls": 1,
+      "duration_ms": 0.714,
+      "exclusive_ms": 0.714,
+      "unfinished": 0
+    },
+    "ai.json_parse": {
+      "calls": 3,
+      "duration_ms": 1.522,
+      "exclusive_ms": 1.522,
+      "unfinished": 0
+    },
+    "ai.identity_validation": {
+      "calls": 1,
+      "duration_ms": 0.551,
+      "exclusive_ms": 0.551,
+      "unfinished": 0
+    },
+    "database.profile_lookup": {
+      "calls": 1,
+      "duration_ms": 0.952,
+      "exclusive_ms": 0.952,
+      "unfinished": 0
+    },
+    "cloud.analysis": {
+      "calls": 1,
+      "duration_ms": 1.598,
+      "exclusive_ms": 1.121,
+      "unfinished": 0
+    },
+    "ai.previous_profile_validation": {
+      "calls": 2,
+      "duration_ms": 1.211,
+      "exclusive_ms": 1.211,
+      "unfinished": 0
+    },
+    "ai.schema_validation": {
+      "calls": 4,
+      "duration_ms": 2.454,
+      "exclusive_ms": 2.454,
+      "unfinished": 0
+    },
+    "cloud.review": {
+      "calls": 1,
+      "duration_ms": 1.979,
+      "exclusive_ms": 1.246,
+      "unfinished": 0
+    },
+    "ai.source_validation": {
+      "calls": 1,
+      "duration_ms": 2.212,
+      "exclusive_ms": 1.515,
+      "unfinished": 0
+    },
+    "result.schema_validation": {
+      "calls": 1,
+      "duration_ms": 0.557,
+      "exclusive_ms": 0.557,
+      "unfinished": 0
+    },
+    "database.transaction_total": {
+      "calls": 1,
+      "duration_ms": 12.249,
+      "exclusive_ms": 10.882,
+      "unfinished": 0
+    },
+    "database.calendar_sync": {
+      "calls": 1,
+      "duration_ms": 0.499,
+      "exclusive_ms": 0.499,
+      "unfinished": 0
+    },
+    "database.profile_and_snapshot": {
+      "calls": 1,
+      "duration_ms": 0.868,
+      "exclusive_ms": 0.868,
+      "unfinished": 0
+    }
+  },
+  "spans": [
+    {
+      "id": 1,
+      "parent": null,
+      "phase": "request.total",
+      "start_ms": 0.3217000048607588,
+      "duration_ms": 84.50540000922047
+    },
+    {
+      "id": 2,
+      "parent": 1,
+      "phase": "request.authentication",
+      "start_ms": 14.286200021160766,
+      "duration_ms": 3.4690999891608953
+    },
+    {
+      "id": 3,
+      "parent": 1,
+      "phase": "request.handler",
+      "start_ms": 18.820400000549853,
+      "duration_ms": 53.919400001177564
+    },
+    {
+      "id": 4,
+      "parent": 3,
+      "phase": "request.body_receive",
+      "start_ms": 19.55399999860674,
+      "duration_ms": 2.4606000224594027
+    },
+    {
+      "id": 5,
+      "parent": 4,
+      "phase": "request.body_receive",
+      "start_ms": 20.23439999902621,
+      "error_type": "GeneratorExit",
+      "duration_ms": 0.9028000058606267
+    },
+    {
+      "id": 6,
+      "parent": 3,
+      "phase": "request.parse_json",
+      "start_ms": 22.72920001996681,
+      "duration_ms": 0.6250999867916107
+    },
+    {
+      "id": 7,
+      "parent": 3,
+      "phase": "request.schema_validation",
+      "start_ms": 23.905300011392683,
+      "duration_ms": 0.6476999842561781
+    },
+    {
+      "id": 8,
+      "parent": 3,
+      "phase": "request.normalize",
+      "start_ms": 25.506100006168708,
+      "duration_ms": 0.7253999938257039
+    },
+    {
+      "id": 9,
+      "parent": 3,
+      "phase": "analysis_and_save",
+      "start_ms": 26.961399998981506,
+      "duration_ms": 44.93360000196844
+    },
+    {
+      "id": 10,
+      "parent": 9,
+      "phase": "ai.settings",
+      "start_ms": 27.55040000192821,
+      "duration_ms": 1.4610000071115792
+    },
+    {
+      "id": 11,
+      "parent": 9,
+      "phase": "ai.analysis_pipeline",
+      "start_ms": 29.5685000019148,
+      "duration_ms": 26.382700016256422
+    },
+    {
+      "id": 12,
+      "parent": 11,
+      "phase": "ai.prompt_load",
+      "start_ms": 30.209400021703914,
+      "duration_ms": 0.8718999742995948
+    },
+    {
+      "id": 13,
+      "parent": 11,
+      "phase": "ai.schema_prepare",
+      "start_ms": 31.68100002221763,
+      "duration_ms": 3.855399991152808
+    },
+    {
+      "id": 14,
+      "parent": 11,
+      "phase": "ai.identity_pipeline",
+      "start_ms": 36.08310001436621,
+      "duration_ms": 5.941499985055998
+    },
+    {
+      "id": 15,
+      "parent": 14,
+      "phase": "cloud.identity",
+      "start_ms": 38.21009999956004,
+      "system_chars": 222,
+      "input_chars": 3352,
+      "image_bytes_base64": 0,
+      "duration_ms": 0.7143999973777682
+    },
+    {
+      "id": 16,
+      "parent": 14,
+      "phase": "ai.json_parse",
+      "start_ms": 39.85840000677854,
+      "duration_ms": 0.5144000169821084
+    },
+    {
+      "id": 17,
+      "parent": 14,
+      "phase": "ai.identity_validation",
+      "start_ms": 40.848700009519234,
+      "duration_ms": 0.5512000061571598
+    },
+    {
+      "id": 18,
+      "parent": 11,
+      "phase": "database.profile_lookup",
+      "start_ms": 42.605800001183525,
+      "duration_ms": 0.9518000006210059
+    },
+    {
+      "id": 19,
+      "parent": 11,
+      "phase": "cloud.analysis",
+      "start_ms": 44.146600004751235,
+      "system_chars": 2507,
+      "input_chars": 3479,
+      "image_bytes_base64": 0,
+      "duration_ms": 1.5980000025592744
+    },
+    {
+      "id": 20,
+      "parent": 19,
+      "phase": "ai.previous_profile_validation",
+      "start_ms": 44.640100008109584,
+      "duration_ms": 0.4774999979417771
+    },
+    {
+      "id": 21,
+      "parent": 11,
+      "phase": "ai.json_parse",
+      "start_ms": 46.20670000440441,
+      "duration_ms": 0.4993000184185803
+    },
+    {
+      "id": 22,
+      "parent": 11,
+      "phase": "ai.schema_validation",
+      "start_ms": 47.2011000092607,
+      "duration_ms": 0.527900003362447
+    },
+    {
+      "id": 23,
+      "parent": 11,
+      "phase": "cloud.review",
+      "start_ms": 48.30920000676997,
+      "system_chars": 2590,
+      "input_chars": 3864,
+      "image_bytes_base64": 0,
+      "duration_ms": 1.979099994059652
+    },
+    {
+      "id": 24,
+      "parent": 23,
+      "phase": "ai.previous_profile_validation",
+      "start_ms": 48.917600011918694,
+      "duration_ms": 0.7331999950110912
+    },
+    {
+      "id": 25,
+      "parent": 11,
+      "phase": "ai.json_parse",
+      "start_ms": 50.818500021705404,
+      "duration_ms": 0.5077999958302826
+    },
+    {
+      "id": 26,
+      "parent": 11,
+      "phase": "ai.schema_validation",
+      "start_ms": 51.94470001151785,
+      "duration_ms": 0.5750999844167382
+    },
+    {
+      "id": 27,
+      "parent": 11,
+      "phase": "ai.source_validation",
+      "start_ms": 53.10990000725724,
+      "duration_ms": 2.2120999929029495
+    },
+    {
+      "id": 28,
+      "parent": 27,
+      "phase": "ai.schema_validation",
+      "start_ms": 53.68710000766441,
+      "duration_ms": 0.6974000134505332
+    },
+    {
+      "id": 29,
+      "parent": 9,
+      "phase": "ai.schema_validation",
+      "start_ms": 56.58240002230741,
+      "duration_ms": 0.6538000016007572
+    },
+    {
+      "id": 30,
+      "parent": 9,
+      "phase": "result.schema_validation",
+      "start_ms": 57.841000001644716,
+      "duration_ms": 0.5565000174101442
+    },
+    {
+      "id": 31,
+      "parent": 9,
+      "phase": "database.transaction_total",
+      "start_ms": 58.941900002537295,
+      "duration_ms": 12.249299994437024
+    },
+    {
+      "id": 32,
+      "parent": 31,
+      "phase": "database.calendar_sync",
+      "start_ms": 61.72399999923073,
+      "duration_ms": 0.49890001537278295
+    },
+    {
+      "id": 33,
+      "parent": 31,
+      "phase": "database.profile_and_snapshot",
+      "start_ms": 62.690500024473295,
+      "duration_ms": 0.8679999737069011
+    }
+  ]
+}
