@@ -1,0 +1,32 @@
+{"event": "start", "id": 1, "parent": null, "phase": "request.total", "start_ms": 0.20509999012574553}
+{"event": "start", "id": 2, "parent": 1, "phase": "request.authentication", "start_ms": 11.306100001093}
+{"event": "end", "id": 2, "parent": 1, "phase": "request.authentication", "start_ms": 11.306100001093, "duration_ms": 3.2337999728042632}
+{"event": "start", "id": 3, "parent": 1, "phase": "request.handler", "start_ms": 15.304599975934252}
+{"event": "start", "id": 4, "parent": 3, "phase": "request.body_receive", "start_ms": 15.74209998943843}
+{"event": "start", "id": 5, "parent": 4, "phase": "request.body_receive", "start_ms": 16.20299997739494}
+{"event": "end", "id": 5, "parent": 4, "phase": "request.body_receive", "start_ms": 16.20299997739494, "error_type": "GeneratorExit", "duration_ms": 0.7840000034775585}
+{"event": "end", "id": 4, "parent": 3, "phase": "request.body_receive", "start_ms": 15.74209998943843, "duration_ms": 1.7772999999579042}
+{"event": "start", "id": 6, "parent": 3, "phase": "request.parse_json", "start_ms": 17.929499997990206}
+{"event": "end", "id": 6, "parent": 3, "phase": "request.parse_json", "start_ms": 17.929499997990206, "duration_ms": 0.4440999764483422}
+{"event": "start", "id": 7, "parent": 3, "phase": "request.schema_validation", "start_ms": 18.7675999768544}
+{"event": "end", "id": 7, "parent": 3, "phase": "request.schema_validation", "start_ms": 18.7675999768544, "duration_ms": 0.4083000239916146}
+{"event": "start", "id": 8, "parent": 3, "phase": "request.normalize", "start_ms": 19.599399995058775}
+{"event": "end", "id": 8, "parent": 3, "phase": "request.normalize", "start_ms": 19.599399995058775, "duration_ms": 0.4139999800827354}
+{"event": "start", "id": 9, "parent": 3, "phase": "analysis_and_save", "start_ms": 20.473999989917502}
+{"event": "start", "id": 10, "parent": 9, "phase": "ai.source_validation", "start_ms": 22.393899998860434}
+{"event": "start", "id": 11, "parent": 10, "phase": "ai.schema_validation", "start_ms": 22.848599997814745}
+{"event": "end", "id": 11, "parent": 10, "phase": "ai.schema_validation", "start_ms": 22.848599997814745, "duration_ms": 0.8923999848775566}
+{"event": "end", "id": 10, "parent": 9, "phase": "ai.source_validation", "start_ms": 22.393899998860434, "duration_ms": 2.4719999928493053}
+{"event": "start", "id": 12, "parent": 9, "phase": "ai.schema_validation", "start_ms": 25.3235999844037}
+{"event": "end", "id": 12, "parent": 9, "phase": "ai.schema_validation", "start_ms": 25.3235999844037, "duration_ms": 0.4718000127468258}
+{"event": "start", "id": 13, "parent": 9, "phase": "result.schema_validation", "start_ms": 26.24349997495301}
+{"event": "end", "id": 13, "parent": 9, "phase": "result.schema_validation", "start_ms": 26.24349997495301, "duration_ms": 0.7025000231806189}
+{"event": "start", "id": 14, "parent": 9, "phase": "database.transaction_total", "start_ms": 27.496099995914847}
+{"event": "start", "id": 15, "parent": 14, "phase": "database.calendar_sync", "start_ms": 30.285799992270768}
+{"event": "end", "id": 15, "parent": 14, "phase": "database.calendar_sync", "start_ms": 30.285799992270768, "duration_ms": 0.5841999955009669}
+{"event": "start", "id": 16, "parent": 14, "phase": "database.profile_and_snapshot", "start_ms": 31.294899992644787}
+{"event": "end", "id": 16, "parent": 14, "phase": "database.profile_and_snapshot", "start_ms": 31.294899992644787, "duration_ms": 0.40419999277219176}
+{"event": "end", "id": 14, "parent": 9, "phase": "database.transaction_total", "start_ms": 27.496099995914847, "duration_ms": 11.053700000047684}
+{"event": "end", "id": 9, "parent": 3, "phase": "analysis_and_save", "start_ms": 20.473999989917502, "duration_ms": 18.58969999011606}
+{"event": "end", "id": 3, "parent": 1, "phase": "request.handler", "start_ms": 15.304599975934252, "duration_ms": 24.402600014582276}
+{"event": "end", "id": 1, "parent": null, "phase": "request.total", "start_ms": 0.20509999012574553, "duration_ms": 50.94769998686388}

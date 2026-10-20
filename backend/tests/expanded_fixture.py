@@ -20,3 +20,7 @@ OUTPUT = {
 
 def output():
     return copy.deepcopy(OUTPUT)
+
+
+def review_output(**corrections):
+    return {'approved': not bool(corrections), **{key:corrections.get(key) for key in OUTPUT}}

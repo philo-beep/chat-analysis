@@ -1,0 +1,507 @@
+{
+  "scenario": "image",
+  "dry_run": false,
+  "demo_requested": false,
+  "limit_seconds": 90,
+  "model": "gpt-6.1-sol",
+  "reasoning_effort": "medium",
+  "quality_review": true,
+  "fixture": "current built-in demo, synthetic data, real cloud, temporary database",
+  "measured_scope": "TestClient -> real /analyze -> full response; excludes browser rendering",
+  "text_chars": 3279,
+  "text_messages": 46,
+  "image_bytes": 85960,
+  "image_dimensions": [
+    900,
+    1320
+  ],
+  "input_sha256": "6a11bf601a1439f071b445c06ce6c82302aabd5a821cb337e7d39d359467f721",
+  "token_usage": [
+    {
+      "prompt_tokens": 5984,
+      "completion_tokens": 192,
+      "total_tokens": 6176
+    },
+    {
+      "prompt_tokens": 6462,
+      "completion_tokens": 1378,
+      "total_tokens": 7840
+    },
+    {
+      "prompt_tokens": 7625,
+      "completion_tokens": 765,
+      "total_tokens": 8390
+    },
+    {
+      "prompt_tokens": 7053,
+      "completion_tokens": 1346,
+      "total_tokens": 8399
+    }
+  ],
+  "analysis_prompt_chars": 2504,
+  "status": "deadline_exceeded",
+  "complete": false,
+  "elapsed_ms": 90005.812,
+  "timings": {
+    "request.total": {
+      "calls": 1,
+      "duration_ms": 90005.584,
+      "exclusive_ms": 11.623,
+      "unfinished": 1
+    },
+    "request.authentication": {
+      "calls": 1,
+      "duration_ms": 3.469,
+      "exclusive_ms": 3.469,
+      "unfinished": 0
+    },
+    "request.handler": {
+      "calls": 1,
+      "duration_ms": 89990.492,
+      "exclusive_ms": 2.559,
+      "unfinished": 1
+    },
+    "request.body_receive": {
+      "calls": 3,
+      "duration_ms": 3.854,
+      "exclusive_ms": 3.017,
+      "unfinished": 0
+    },
+    "request.parse_multipart": {
+      "calls": 1,
+      "duration_ms": 2.019,
+      "exclusive_ms": 0.949,
+      "unfinished": 0
+    },
+    "image.local_validate": {
+      "calls": 1,
+      "duration_ms": 7.363,
+      "exclusive_ms": 7.363,
+      "unfinished": 0
+    },
+    "analysis_and_save": {
+      "calls": 1,
+      "duration_ms": 89976.604,
+      "exclusive_ms": 5.612,
+      "unfinished": 1
+    },
+    "ai.settings": {
+      "calls": 2,
+      "duration_ms": 1.846,
+      "exclusive_ms": 1.846,
+      "unfinished": 0
+    },
+    "image.transcription_pipeline": {
+      "calls": 1,
+      "duration_ms": 23059.216,
+      "exclusive_ms": 5.449,
+      "unfinished": 0
+    },
+    "cloud.transcription": {
+      "calls": 1,
+      "duration_ms": 23053.395,
+      "exclusive_ms": 43.05,
+      "unfinished": 0
+    },
+    "cloud.wait_response_headers": {
+      "calls": 5,
+      "duration_ms": 89746.872,
+      "exclusive_ms": 89746.872,
+      "unfinished": 1
+    },
+    "cloud.read_response_body": {
+      "calls": 4,
+      "duration_ms": 2.844,
+      "exclusive_ms": 2.844,
+      "unfinished": 0
+    },
+    "ai.json_parse": {
+      "calls": 8,
+      "duration_ms": 4.419,
+      "exclusive_ms": 4.419,
+      "unfinished": 0
+    },
+    "ai.provider_response_validate": {
+      "calls": 4,
+      "duration_ms": 1.68,
+      "exclusive_ms": 1.68,
+      "unfinished": 0
+    },
+    "ai.analysis_pipeline": {
+      "calls": 1,
+      "duration_ms": 66909.93,
+      "exclusive_ms": 9.415,
+      "unfinished": 1
+    },
+    "ai.prompt_load": {
+      "calls": 1,
+      "duration_ms": 0.591,
+      "exclusive_ms": 0.591,
+      "unfinished": 0
+    },
+    "ai.schema_prepare": {
+      "calls": 1,
+      "duration_ms": 2.658,
+      "exclusive_ms": 2.658,
+      "unfinished": 0
+    },
+    "cloud.analysis": {
+      "calls": 2,
+      "duration_ms": 48235.061,
+      "exclusive_ms": 75.166,
+      "unfinished": 0
+    },
+    "ai.schema_validation": {
+      "calls": 4,
+      "duration_ms": 2.004,
+      "exclusive_ms": 2.004,
+      "unfinished": 0
+    },
+    "cloud.review": {
+      "calls": 2,
+      "duration_ms": 18657.346,
+      "exclusive_ms": 73.556,
+      "unfinished": 1
+    },
+    "ai.source_validation": {
+      "calls": 1,
+      "duration_ms": 1.865,
+      "exclusive_ms": 1.442,
+      "unfinished": 0
+    }
+  },
+  "spans": [
+    {
+      "id": 1,
+      "parent": null,
+      "phase": "request.total",
+      "start_ms": 0.2272999845445156
+    },
+    {
+      "id": 2,
+      "parent": 1,
+      "phase": "request.authentication",
+      "start_ms": 10.897800006205216,
+      "duration_ms": 3.4685999853536487
+    },
+    {
+      "id": 3,
+      "parent": 1,
+      "phase": "request.handler",
+      "start_ms": 15.319199999794364
+    },
+    {
+      "id": 4,
+      "parent": 3,
+      "phase": "request.body_receive",
+      "start_ms": 15.802599984453991,
+      "duration_ms": 1.9466000085230917
+    },
+    {
+      "id": 5,
+      "parent": 4,
+      "phase": "request.body_receive",
+      "start_ms": 16.329400008544326,
+      "error_type": "GeneratorExit",
+      "duration_ms": 0.8369999995920807
+    },
+    {
+      "id": 6,
+      "parent": 3,
+      "phase": "request.parse_multipart",
+      "start_ms": 18.197800003690645,
+      "duration_ms": 2.0193999807816
+    },
+    {
+      "id": 7,
+      "parent": 6,
+      "phase": "request.body_receive",
+      "start_ms": 18.668500008061528,
+      "duration_ms": 1.0705000022426248
+    },
+    {
+      "id": 8,
+      "parent": 3,
+      "phase": "image.local_validate",
+      "start_ms": 20.685099996626377,
+      "duration_ms": 7.363200013060123
+    },
+    {
+      "id": 9,
+      "parent": 3,
+      "phase": "analysis_and_save",
+      "start_ms": 29.207099985796958
+    },
+    {
+      "id": 10,
+      "parent": 9,
+      "phase": "ai.settings",
+      "start_ms": 31.202999991364777,
+      "duration_ms": 1.120700006140396
+    },
+    {
+      "id": 11,
+      "parent": 9,
+      "phase": "ai.settings",
+      "start_ms": 35.138400009600446,
+      "duration_ms": 0.7253999938257039
+    },
+    {
+      "id": 12,
+      "parent": 9,
+      "phase": "image.transcription_pipeline",
+      "start_ms": 36.26970000914298,
+      "duration_ms": 23059.216099994956
+    },
+    {
+      "id": 13,
+      "parent": 12,
+      "phase": "cloud.transcription",
+      "start_ms": 40.7843999855686,
+      "system_chars": 208,
+      "input_chars": 22,
+      "image_bytes_base64": 114616,
+      "duration_ms": 23053.39549999917
+    },
+    {
+      "id": 14,
+      "parent": 13,
+      "phase": "cloud.wait_response_headers",
+      "start_ms": 81.482200010214,
+      "duration_ms": 23008.359299972653
+    },
+    {
+      "id": 15,
+      "parent": 13,
+      "phase": "cloud.read_response_body",
+      "start_ms": 23090.571100008674,
+      "duration_ms": 0.6118000019341707
+    },
+    {
+      "id": 16,
+      "parent": 13,
+      "phase": "ai.json_parse",
+      "start_ms": 23091.579400002956,
+      "duration_ms": 0.9626999963074923
+    },
+    {
+      "id": 17,
+      "parent": 13,
+      "phase": "ai.provider_response_validate",
+      "start_ms": 23093.341800005874,
+      "duration_ms": 0.41149999015033245
+    },
+    {
+      "id": 18,
+      "parent": 12,
+      "phase": "ai.json_parse",
+      "start_ms": 23094.565899984445,
+      "duration_ms": 0.3718000079970807
+    },
+    {
+      "id": 19,
+      "parent": 9,
+      "phase": "ai.analysis_pipeline",
+      "start_ms": 23095.881299988832
+    },
+    {
+      "id": 20,
+      "parent": 19,
+      "phase": "ai.prompt_load",
+      "start_ms": 23096.354999986943,
+      "duration_ms": 0.590900017414242
+    },
+    {
+      "id": 21,
+      "parent": 19,
+      "phase": "ai.schema_prepare",
+      "start_ms": 23097.32139998232,
+      "duration_ms": 2.6581000129226595
+    },
+    {
+      "id": 22,
+      "parent": 19,
+      "phase": "cloud.analysis",
+      "start_ms": 23100.565200002166,
+      "system_chars": 2507,
+      "input_chars": 321,
+      "image_bytes_base64": 0,
+      "duration_ms": 16496.622000006028
+    },
+    {
+      "id": 23,
+      "parent": 22,
+      "phase": "cloud.wait_response_headers",
+      "start_ms": 23135.008499986725,
+      "duration_ms": 16458.059800002957
+    },
+    {
+      "id": 24,
+      "parent": 22,
+      "phase": "cloud.read_response_body",
+      "start_ms": 39594.014900008915,
+      "duration_ms": 0.7793999975547194
+    },
+    {
+      "id": 25,
+      "parent": 22,
+      "phase": "ai.json_parse",
+      "start_ms": 39595.26880001067,
+      "duration_ms": 0.7326999912038445
+    },
+    {
+      "id": 26,
+      "parent": 22,
+      "phase": "ai.provider_response_validate",
+      "start_ms": 39596.40899999067,
+      "duration_ms": 0.3926999925170094
+    },
+    {
+      "id": 27,
+      "parent": 19,
+      "phase": "ai.json_parse",
+      "start_ms": 39597.57529999479,
+      "duration_ms": 0.4050999996252358
+    },
+    {
+      "id": 28,
+      "parent": 19,
+      "phase": "ai.schema_validation",
+      "start_ms": 39598.42480000225,
+      "duration_ms": 0.5625000048894435
+    },
+    {
+      "id": 29,
+      "parent": 19,
+      "phase": "cloud.review",
+      "start_ms": 39600.963200005936,
+      "system_chars": 2740,
+      "input_chars": 2263,
+      "image_bytes_base64": 0,
+      "duration_ms": 15690.802600001916
+    },
+    {
+      "id": 30,
+      "parent": 29,
+      "phase": "cloud.wait_response_headers",
+      "start_ms": 39635.997200006386,
+      "duration_ms": 15651.808099995833
+    },
+    {
+      "id": 31,
+      "parent": 29,
+      "phase": "cloud.read_response_body",
+      "start_ms": 55288.88459998416,
+      "duration_ms": 0.6331000186037272
+    },
+    {
+      "id": 32,
+      "parent": 29,
+      "phase": "ai.json_parse",
+      "start_ms": 55289.93269999046,
+      "duration_ms": 0.4123999970033765
+    },
+    {
+      "id": 33,
+      "parent": 29,
+      "phase": "ai.provider_response_validate",
+      "start_ms": 55290.747099992586,
+      "duration_ms": 0.43849999201484025
+    },
+    {
+      "id": 34,
+      "parent": 19,
+      "phase": "ai.json_parse",
+      "start_ms": 55292.17040000367,
+      "duration_ms": 0.4222999850753695
+    },
+    {
+      "id": 35,
+      "parent": 19,
+      "phase": "ai.schema_validation",
+      "start_ms": 55293.4016000072,
+      "duration_ms": 0.5342999938875437
+    },
+    {
+      "id": 36,
+      "parent": 19,
+      "phase": "ai.source_validation",
+      "start_ms": 55294.38750000554,
+      "duration_ms": 1.8650999991223216
+    },
+    {
+      "id": 37,
+      "parent": 36,
+      "phase": "ai.schema_validation",
+      "start_ms": 55294.815500004916,
+      "duration_ms": 0.42359999497421086
+    },
+    {
+      "id": 38,
+      "parent": 19,
+      "phase": "cloud.analysis",
+      "start_ms": 55296.73689999618,
+      "system_chars": 2552,
+      "input_chars": 1805,
+      "image_bytes_base64": 0,
+      "duration_ms": 31738.439300010214
+    },
+    {
+      "id": 39,
+      "parent": 38,
+      "phase": "cloud.wait_response_headers",
+      "start_ms": 55332.69919999293,
+      "duration_ms": 31698.14670001506
+    },
+    {
+      "id": 40,
+      "parent": 38,
+      "phase": "cloud.read_response_body",
+      "start_ms": 87031.96910000406,
+      "duration_ms": 0.8197999850381166
+    },
+    {
+      "id": 41,
+      "parent": 38,
+      "phase": "ai.json_parse",
+      "start_ms": 87033.24739998789,
+      "duration_ms": 0.5263000202830881
+    },
+    {
+      "id": 42,
+      "parent": 38,
+      "phase": "ai.provider_response_validate",
+      "start_ms": 87034.26700001,
+      "duration_ms": 0.4374999844003469
+    },
+    {
+      "id": 43,
+      "parent": 19,
+      "phase": "ai.json_parse",
+      "start_ms": 87035.66769999452,
+      "duration_ms": 0.5852000031154603
+    },
+    {
+      "id": 44,
+      "parent": 19,
+      "phase": "ai.schema_validation",
+      "start_ms": 87036.66029998567,
+      "duration_ms": 0.48400001833215356
+    },
+    {
+      "id": 45,
+      "parent": 19,
+      "phase": "cloud.review",
+      "start_ms": 87039.2681999947,
+      "system_chars": 2740,
+      "input_chars": 2428,
+      "image_bytes_base64": 0
+    },
+    {
+      "id": 46,
+      "parent": 45,
+      "phase": "cloud.wait_response_headers",
+      "start_ms": 87075.31359998393
+    }
+  ]
+}

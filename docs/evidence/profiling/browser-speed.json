@@ -1,0 +1,23 @@
+{
+  "checks": [
+    "文字演示显示完整结果和显著演示标识，含客户需求、确认、建议、回复及日期任务",
+    "演示仍能加入日历、保存历史并在刷新后保留来源标识和已加入状态",
+    "截图演示真实走图片上传与保存，完整结果无需云端，保留原图和核对转录",
+    "两种演示云端调用数均为0，虚构画像不混入我的客户",
+    "修改文字后进入真实分析，失败保留原文，不返回旧预置结果",
+    "修改客户名称取消演示标记，320px不溢出，浏览器无异常"
+  ],
+  "errors": [],
+  "latencies": [
+    {
+      "scenario": "text",
+      "submit_to_complete_ms": 119
+    },
+    {
+      "scenario": "image",
+      "submit_to_complete_ms": 140
+    }
+  ],
+  "cloud": "trapped, no real service calls",
+  "fixture": "synthetic temporary database"
+}

@@ -202,7 +202,7 @@ async function exportJson() {
     <header class="result-heading"><div class="section-title"><span class="section-icon"><AppIcon name="file" /></span><div><div class="eyebrow">CUSTOMER BRIEF</div><h2>分析结果 <small v-if="recordId">#{{ recordId }}</small></h2></div></div><span class="result-status" :class="{ pending: dirty }"><span></span>{{ dirty ? '有待保存修改' : '已保存至本地' }}</span></header>
     <div class="result-content">
     <p v-if="draft.is_sample === true" class="sample-flag" role="status">
-      开发样例：以下为示例数据，不是真实模型分析，请核对原文后使用。
+      演示结果：以下为经过校验的预置样例，本次未调用云端分析。日期及事项请核对原文；修改输入后将进行真实分析。
     </p>
     <p v-else-if="draft.is_sample !== false" class="hint">旧记录未标注分析来源，请核对原文。</p>
     <div class="result-overview"><div><span>已梳理需求</span><strong>{{ draft.requirements.length }}<small>项</small></strong></div><div><span>待确认问题</span><strong>{{ draft.questions.length }}<small>项</small></strong></div><div><span>建议待办</span><strong>{{ suggestionCount }}<small>项</small></strong></div></div>

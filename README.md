@@ -8,6 +8,8 @@
 
 当前版本包含登录注册与权限校验、文本/截图聊天分析、历史记录与内容目录、原文折叠、编辑导出、个人日历/待办池/甘特图、我的客户，以及聊天删除与关联日历任务联动。完整运行需要后端与前端同时启动，并配置有调用权限的云端 AI Key。
 
+演示按钮填入的固定文字/截图可直接展示经过核对的预置分析，明确标为“演示结果”，本次不调用云端；修改文字、客户名称或图片后恢复真实分析。真实请求增加账号隔离的两分钟内存复用、按需身份识别和精简复核返回；原模型、medium推理强度、严格校验及事务保留。演示实测约0.12–0.14秒；首次新聊天仍受云端耗时影响，不能保证秒回。详见 [分析提速与实际耗时](docs/analysis-speed-delivery.md)。
+
 GitHub 默认 `main` 分支为完整交付版本。运行代码已在仓库中，不需要原始压缩包或桌面模型目录；用户数据和凭据需要在新机器上重新建立。
 
 ## 目录结构
@@ -123,7 +125,7 @@ python -m venv .venv-c
 backend/.venv/Scripts/python.exe -B backend/tests/check_acceptance.py --images --output "$env:TEMP/keyoushu-acceptance.json"
 ```
 
-前端验证在 `frontend` 目录执行 `npm test`、`npm run build`。浏览器验收执行 `npm run test:browser`，五组测试（日历、侧栏、欢迎与登录、扩展分析操作、我的客户）顺序运行，使用临时数据库及端口 18000/15173，不调用云端 AI。Windows 默认使用已安装的 Edge；无 Edge 时先执行 `npx playwright install chromium` 下载测试浏览器。可用 `EDGE_EXECUTABLE` 指定浏览器路径、`PYTHON_EXECUTABLE` 指定后端 Python；不需要本机 Codex 工具目录。本机若复用项目外的 Playwright 工具，可设置 `PLAYWRIGHT_NODE_MODULES`，否则按锁定依赖正常安装即可。
+前端验证在 `frontend` 目录执行 `npm test`、`npm run build`。浏览器验收执行 `npm run test:browser`，六组测试（日历、侧栏、欢迎与登录、扩展分析操作、我的客户、提速演示）顺序运行，使用临时数据库及端口 18000/15173，不调用云端 AI。Windows 默认使用已安装的 Edge；无 Edge 时先执行 `npx playwright install chromium` 下载测试浏览器。可用 `EDGE_EXECUTABLE` 指定浏览器路径、`PYTHON_EXECUTABLE` 指定后端 Python；不需要本机 Codex 工具目录。本机若复用项目外的 Playwright 工具，可设置 `PLAYWRIGHT_NODE_MODULES`，否则按锁定依赖正常安装即可。
 
 输入和合成截图位于 `samples/acceptance-cases.json` 与 `samples/screenshots/`；检查结果与实际转录写入指定 JSON，任一检查失败时退出码为 1。
 

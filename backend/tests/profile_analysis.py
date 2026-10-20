@@ -188,7 +188,13 @@ def install(trace):
         with trace.span('cloud.' + name, system_chars=len(system),
                         input_chars=sum(len(block.get('text','')) for block in content),
                         image_bytes_base64=sum(len(block.get('source',{}).get('data','')) for block in content)):
-            return original_complete(client, system, content, schema=schema)
+            result = original_complete(client, system, content, schema=schema)
+            # This opt-in runner uses synthetic fixtures only, never user records.
+            try:
+                trace.metadata.setdefault('synthetic_model_outputs',[]).append({'phase':name,'json':json.loads(result)})
+            except (ValueError,TypeError):
+                trace.metadata.setdefault('synthetic_model_output_errors',[]).append(name)
+            return result
     ai_service.ChatCompletionsClient.complete = complete
     original_response = ai_service.ChatCompletionsClient._response
     def response(client, body):
@@ -216,6 +222,9 @@ def worker(args):
         def stub(client, system, content, schema=None):
             if schema and schema['name']=='keyoushu_customer_identity':
                 return json.dumps(dict(display_name='未知',company='未知',name_quote='',company_quote=''))
+            if schema and schema['name']=='keyoushu_sales_review':
+                return json.dumps(dict(approved=True,requirements=None,questions=None,tasks=None,reply=None,
+                                      ddl_tasks=None,suggested_tasks=None,customer_profile=None))
             if not schema:
                 return json.dumps({'transcript':'客户：我们需要150件文化衫。'},ensure_ascii=False)
             from analysis_models import CustomerProfile
@@ -226,16 +235,23 @@ def worker(args):
         ai_service.ChatCompletionsClient.complete=stub
     component = (ROOT/'frontend/src/components/ChatInput.vue').read_text(encoding='utf-8')
     text = component.split('const demoText = `',1)[1].split('`',1)[0]
+    if args.short:
+        text = ('客户：我是松禾商贸的陈晓明，负责采购。需要150件纯棉文化衫，预算上限6000元。\n'
+                '商家：收到，我先核实方案。\n'
+                '客户：请2026年11月20日前交货，具体报价要我主管审批。我们也在比较其他供应商。\n'
+                '商家：我会先核实产能，不直接承诺交期。')
     image_path = ROOT/'frontend/public/demo-sales-chat.png'
     image = image_path.read_bytes()
-    trace.metadata = dict(scenario=args.scenario, dry_run=args.dry_run, limit_seconds=args.limit, model=settings.model,
+    trace.metadata = dict(scenario=args.scenario, short_fixture=args.short, dry_run=args.dry_run, demo_requested=args.demo, limit_seconds=args.limit, model=settings.model,
         reasoning_effort=settings.reasoning_effort, quality_review=settings.quality_review,
-        fixture='current built-in demo, synthetic data, real cloud, temporary database',
+        fixture=('synthetic model stub' if args.dry_run else 'synthetic data, real cloud')+', temporary database',
         measured_scope='TestClient -> real /analyze -> full response; excludes browser rendering',
         text_chars=len(text), text_messages=len(text.splitlines()),
         image_bytes=len(image), image_dimensions=list(Image.open(image_path).size),
         input_sha256=hashlib.sha256(text.encode() if args.scenario=='text' else image).hexdigest())
     install(trace)
+    import analysis_cache
+    analysis_cache.clear()
     def deadline():
         report = trace.save(status='deadline_exceeded', complete=False)
         print(json.dumps(dict(status='deadline_exceeded', elapsed_ms=report['elapsed_ms'],
@@ -247,6 +263,8 @@ def worker(args):
         user=auth_store.create_user('profile_synthetic','Profiling-synthetic-2026',['member'])
         login = client.post('/api/auth/login',json={'username':'profile_synthetic','password':'Profiling-synthetic-2026'})
         client.headers['Authorization']='Bearer '+login.json()['data']['token']
+        if args.demo:
+            client.headers['X-Keyoushu-Demo']='1'
         trace.start=time.perf_counter()
         trace.active=True
         timer=threading.Timer(args.limit,deadline)
@@ -263,8 +281,24 @@ def worker(args):
             trace.active=False
             report=trace.save(status=response.status_code,complete=True,
                 result_keys=list(response.json()),
+                response=response.json(),
                 saved_records=len(database.list_records(owner_id=user['id'],include_all=False)))
             print(json.dumps(dict(status=report['status'],elapsed_ms=report['elapsed_ms'],timings=report['timings']),ensure_ascii=False),flush=True)
+            if args.cached_repeat and response.status_code == 200:
+                trace.target = target.with_name(target.stem+'-repeat.json')
+                trace.events = trace.target.with_suffix('.jsonl')
+                trace.events.write_text('',encoding='utf-8')
+                trace.spans=[]
+                trace.metadata={key:value for key,value in trace.metadata.items()
+                                if key not in ('token_usage','synthetic_model_outputs','synthetic_model_output_errors')}
+                trace.metadata['cached_repeat']=True
+                trace.start=time.perf_counter()
+                trace.active=True
+                with trace.span('request.total'):
+                    repeated=client.post('/analyze',json={'text':'客户名称：演示客户\n'+text})
+                trace.active=False
+                repeated_report=trace.save(status=repeated.status_code,complete=True,response=repeated.json())
+                print(json.dumps(dict(repeat_status=repeated.status_code,elapsed_ms=repeated_report['elapsed_ms']),ensure_ascii=False),flush=True)
         finally:
             timer.cancel()
 
@@ -276,6 +310,9 @@ def main_entry():
     parser.add_argument('--output')
     parser.add_argument('--worker',action='store_true')
     parser.add_argument('--dry-run',action='store_true',help='Instrumentation sanity check; no cloud calls')
+    parser.add_argument('--demo',action='store_true',help='Measure exact fixed demonstration, not real cloud analysis')
+    parser.add_argument('--short',action='store_true',help='Use a separate short synthetic business fixture')
+    parser.add_argument('--cached-repeat',action='store_true',help='After success, measure an immediate identical text request')
     args=parser.parse_args()
     target=Path(args.output) if args.output else ROOT/'docs/evidence/profiling'/('baseline-'+args.scenario+'.json')
     target.parent.mkdir(parents=True,exist_ok=True)
@@ -286,6 +323,12 @@ def main_entry():
         command=[sys.executable,'-B','-u',__file__,args.scenario,'--worker','--limit',str(args.limit),'--output',str(target)]
         if args.dry_run:
             command.append('--dry-run')
+        if args.demo:
+            command.append('--demo')
+        if args.short:
+            command.append('--short')
+        if args.cached_repeat:
+            command.append('--cached-repeat')
         try:
             result=subprocess.run(command,timeout=args.limit+15)
         except subprocess.TimeoutExpired:

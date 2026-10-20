@@ -153,6 +153,42 @@ class AIOutput(BaseModel):
         }
 
 
+class AIReview(BaseModel):
+    """Review every field, return only whole-field corrections; never skip review."""
+    model_config = ConfigDict(strict=True, extra="forbid")
+    approved: StrictBool
+    requirements: list[RequirementModel] | None
+    questions: list[AIQuestion] | None
+    tasks: list[StrictStr] | None
+    reply: StrictStr | None
+    ddl_tasks: list[DDLTask] | None
+    suggested_tasks: list[SuggestedTask] | None
+    customer_profile: CustomerProfile | None
+
+    @model_validator(mode="after")
+    def consistent_decision(self):
+        changed = any(value is not None for key,value in self.model_dump().items() if key != 'approved')
+        if self.approved == changed:
+            raise ValueError('复核通过时各修正字段须为null，不通过时至少提供一个完整替换字段')
+        return self
+
+    @classmethod
+    def response_schema(cls):
+        schema = cls.model_json_schema()
+        def strict(node):
+            if isinstance(node, dict):
+                node.pop('default', None)
+                if node.get('type') == 'object' and 'properties' in node:
+                    node['required'] = list(node['properties'])
+                for value in node.values():
+                    strict(value)
+            elif isinstance(node, list):
+                for value in node:
+                    strict(value)
+        strict(schema)
+        return {'name':'keyoushu_sales_review','strict':True,'schema':schema}
+
+
 class StoredQuestion(AIQuestion):
     status: Literal["pending", "confirmed", "dismissed"] = "pending"
     confirmed_answer: StrictStr | None = None

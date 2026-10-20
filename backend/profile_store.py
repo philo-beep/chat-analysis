@@ -106,6 +106,14 @@ def context_for_identity(owner_id, identity):
             "identity_key": key, "profile": _profile_values(_serialize(row)) if row else None}
 
 
+def has_named_profiles(owner_id):
+    """Only identifiable profiles can contribute context to a later chat."""
+    import database
+    with database._connect() as conn:
+        return conn.execute("SELECT 1 FROM customer_profiles WHERE owner_id=? AND identity_key LIKE 'named:%' LIMIT 1",
+                            (owner_id,)).fetchone() is not None
+
+
 lookup_profile = context_for_identity
 
 

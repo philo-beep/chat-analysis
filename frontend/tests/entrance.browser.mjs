@@ -166,6 +166,7 @@ try {
   const imageRequest = page.waitForRequest(request => request.url() === api + '/analyze' && request.method() === 'POST')
   await inputPanel.getByRole('button', { name: '开始分析', exact: true }).click()
   const submitted = await imageRequest
+  assert.equal(submitted.headers()['x-keyoushu-demo'], '1', '原样固定截图显式请求预置演示结果')
   const submittedBytes = submitted.postDataBuffer()
   assert.match(submitted.headers()['content-type'], /multipart\/form-data; boundary=/)
   const submittedForm = await new Response(submittedBytes, { headers: { 'Content-Type': submitted.headers()['content-type'] } }).formData()

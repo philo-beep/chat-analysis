@@ -1,0 +1,70 @@
+{"event": "start", "id": 1, "parent": null, "phase": "request.total", "start_ms": 0.2106000029016286}
+{"event": "start", "id": 2, "parent": 1, "phase": "request.authentication", "start_ms": 12.076799990609288}
+{"event": "end", "id": 2, "parent": 1, "phase": "request.authentication", "start_ms": 12.076799990609288, "duration_ms": 3.453200013609603}
+{"event": "start", "id": 3, "parent": 1, "phase": "request.handler", "start_ms": 16.439200000604615}
+{"event": "start", "id": 4, "parent": 3, "phase": "request.body_receive", "start_ms": 16.91100001335144}
+{"event": "start", "id": 5, "parent": 4, "phase": "request.body_receive", "start_ms": 17.35109998844564}
+{"event": "end", "id": 5, "parent": 4, "phase": "request.body_receive", "start_ms": 17.35109998844564, "error_type": "GeneratorExit", "duration_ms": 0.9320000244770199}
+{"event": "end", "id": 4, "parent": 3, "phase": "request.body_receive", "start_ms": 16.91100001335144, "duration_ms": 2.0229999790899456}
+{"event": "start", "id": 6, "parent": 3, "phase": "request.parse_multipart", "start_ms": 19.386400002986193}
+{"event": "start", "id": 7, "parent": 6, "phase": "request.body_receive", "start_ms": 19.82399998814799}
+{"event": "end", "id": 7, "parent": 6, "phase": "request.body_receive", "start_ms": 19.82399998814799, "duration_ms": 0.600500003201887}
+{"event": "end", "id": 6, "parent": 3, "phase": "request.parse_multipart", "start_ms": 19.386400002986193, "duration_ms": 1.4615000109188259}
+{"event": "start", "id": 8, "parent": 3, "phase": "image.local_validate", "start_ms": 21.316400001524016}
+{"event": "end", "id": 8, "parent": 3, "phase": "image.local_validate", "start_ms": 21.316400001524016, "duration_ms": 9.84240000252612}
+{"event": "start", "id": 9, "parent": 3, "phase": "analysis_and_save", "start_ms": 31.791699992027134}
+{"event": "start", "id": 10, "parent": 9, "phase": "ai.settings", "start_ms": 32.42179998778738}
+{"event": "end", "id": 10, "parent": 9, "phase": "ai.settings", "start_ms": 32.42179998778738, "duration_ms": 0.8507000165991485}
+{"event": "start", "id": 11, "parent": 9, "phase": "image.transcription_pipeline", "start_ms": 33.723600005032495}
+{"event": "start", "id": 12, "parent": 11, "phase": "cloud.transcription", "start_ms": 38.05169998668134, "system_chars": 208, "input_chars": 22, "image_bytes_base64": 114616}
+{"event": "start", "id": 13, "parent": 12, "phase": "cloud.wait_response_headers", "start_ms": 76.59240000066347}
+{"event": "end", "id": 13, "parent": 12, "phase": "cloud.wait_response_headers", "start_ms": 76.59240000066347, "duration_ms": 24603.83290000027}
+{"event": "start", "id": 14, "parent": 12, "phase": "cloud.read_response_body", "start_ms": 24681.327400001464}
+{"event": "end", "id": 14, "parent": 12, "phase": "cloud.read_response_body", "start_ms": 24681.327400001464, "duration_ms": 0.6433000089600682}
+{"event": "start", "id": 15, "parent": 12, "phase": "ai.json_parse", "start_ms": 24682.348600006662}
+{"event": "end", "id": 15, "parent": 12, "phase": "ai.json_parse", "start_ms": 24682.348600006662, "duration_ms": 0.7412999984808266}
+{"event": "start", "id": 16, "parent": 12, "phase": "ai.provider_response_validate", "start_ms": 24683.50039998768}
+{"event": "end", "id": 16, "parent": 12, "phase": "ai.provider_response_validate", "start_ms": 24683.50039998768, "duration_ms": 0.5267000233288854}
+{"event": "end", "id": 12, "parent": 11, "phase": "cloud.transcription", "start_ms": 38.05169998668134, "system_chars": 208, "input_chars": 22, "image_bytes_base64": 114616, "duration_ms": 24646.61310001975}
+{"event": "start", "id": 17, "parent": 11, "phase": "ai.json_parse", "start_ms": 24685.189999989234}
+{"event": "end", "id": 17, "parent": 11, "phase": "ai.json_parse", "start_ms": 24685.189999989234, "duration_ms": 0.430900021456182}
+{"event": "end", "id": 11, "parent": 9, "phase": "image.transcription_pipeline", "start_ms": 33.723600005032495, "duration_ms": 24652.459799981443}
+{"event": "start", "id": 18, "parent": 9, "phase": "ai.analysis_pipeline", "start_ms": 24686.61730000167}
+{"event": "start", "id": 19, "parent": 18, "phase": "ai.prompt_load", "start_ms": 24687.049500003923}
+{"event": "end", "id": 19, "parent": 18, "phase": "ai.prompt_load", "start_ms": 24687.049500003923, "duration_ms": 0.6107999943196774}
+{"event": "start", "id": 20, "parent": 18, "phase": "ai.schema_prepare", "start_ms": 24688.132899987977}
+{"event": "end", "id": 20, "parent": 18, "phase": "ai.schema_prepare", "start_ms": 24688.132899987977, "duration_ms": 2.6218999992124736}
+{"event": "start", "id": 21, "parent": 18, "phase": "ai.identity_pipeline", "start_ms": 24691.168199991807}
+{"event": "start", "id": 22, "parent": 21, "phase": "cloud.identity", "start_ms": 24692.255800007842, "system_chars": 222, "input_chars": 268, "image_bytes_base64": 0}
+{"event": "start", "id": 23, "parent": 22, "phase": "cloud.wait_response_headers", "start_ms": 24725.31280000112}
+{"event": "end", "id": 23, "parent": 22, "phase": "cloud.wait_response_headers", "start_ms": 24725.31280000112, "duration_ms": 4643.7141000060365}
+{"event": "start", "id": 24, "parent": 22, "phase": "cloud.read_response_body", "start_ms": 29369.83139999211}
+{"event": "end", "id": 24, "parent": 22, "phase": "cloud.read_response_body", "start_ms": 29369.83139999211, "duration_ms": 0.9046000195667148}
+{"event": "start", "id": 25, "parent": 22, "phase": "ai.json_parse", "start_ms": 29371.313200012082}
+{"event": "end", "id": 25, "parent": 22, "phase": "ai.json_parse", "start_ms": 29371.313200012082, "duration_ms": 0.4769999941345304}
+{"event": "start", "id": 26, "parent": 22, "phase": "ai.provider_response_validate", "start_ms": 29372.165999986464}
+{"event": "end", "id": 26, "parent": 22, "phase": "ai.provider_response_validate", "start_ms": 29372.165999986464, "duration_ms": 0.43670000741258264}
+{"event": "end", "id": 22, "parent": 21, "phase": "cloud.identity", "start_ms": 24692.255800007842, "system_chars": 222, "input_chars": 268, "image_bytes_base64": 0, "duration_ms": 4680.781799979741}
+{"event": "start", "id": 27, "parent": 21, "phase": "ai.json_parse", "start_ms": 29373.418600007426}
+{"event": "end", "id": 27, "parent": 21, "phase": "ai.json_parse", "start_ms": 29373.418600007426, "duration_ms": 0.37379999412223697}
+{"event": "start", "id": 28, "parent": 21, "phase": "ai.identity_validation", "start_ms": 29374.254599999404}
+{"event": "end", "id": 28, "parent": 21, "phase": "ai.identity_validation", "start_ms": 29374.254599999404, "duration_ms": 0.371300004189834}
+{"event": "end", "id": 21, "parent": 18, "phase": "ai.identity_pipeline", "start_ms": 24691.168199991807, "duration_ms": 4683.871200017165}
+{"event": "start", "id": 29, "parent": 18, "phase": "database.profile_lookup", "start_ms": 29375.468000012916}
+{"event": "end", "id": 29, "parent": 18, "phase": "database.profile_lookup", "start_ms": 29375.468000012916, "duration_ms": 7.6865000010002404}
+{"event": "start", "id": 30, "parent": 18, "phase": "cloud.analysis", "start_ms": 29383.81520000985, "system_chars": 2507, "input_chars": 395, "image_bytes_base64": 0}
+{"event": "start", "id": 31, "parent": 30, "phase": "cloud.wait_response_headers", "start_ms": 29416.660899994895}
+{"event": "end", "id": 31, "parent": 30, "phase": "cloud.wait_response_headers", "start_ms": 29416.660899994895, "duration_ms": 36084.437400015304}
+{"event": "start", "id": 32, "parent": 30, "phase": "cloud.read_response_body", "start_ms": 65501.79589999607}
+{"event": "end", "id": 32, "parent": 30, "phase": "cloud.read_response_body", "start_ms": 65501.79589999607, "duration_ms": 0.6868999917060137}
+{"event": "start", "id": 33, "parent": 30, "phase": "ai.json_parse", "start_ms": 65502.87019999814}
+{"event": "end", "id": 33, "parent": 30, "phase": "ai.json_parse", "start_ms": 65502.87019999814, "duration_ms": 0.454699998954311}
+{"event": "start", "id": 34, "parent": 30, "phase": "ai.provider_response_validate", "start_ms": 65503.68140000501}
+{"event": "end", "id": 34, "parent": 30, "phase": "ai.provider_response_validate", "start_ms": 65503.68140000501, "duration_ms": 0.3960999893024564}
+{"event": "end", "id": 30, "parent": 18, "phase": "cloud.analysis", "start_ms": 29383.81520000985, "system_chars": 2507, "input_chars": 395, "image_bytes_base64": 0, "duration_ms": 36120.67000000388}
+{"event": "start", "id": 35, "parent": 18, "phase": "ai.json_parse", "start_ms": 65504.87539998721}
+{"event": "end", "id": 35, "parent": 18, "phase": "ai.json_parse", "start_ms": 65504.87539998721, "duration_ms": 0.4096000047866255}
+{"event": "start", "id": 36, "parent": 18, "phase": "ai.schema_validation", "start_ms": 65505.684800009476}
+{"event": "end", "id": 36, "parent": 18, "phase": "ai.schema_validation", "start_ms": 65505.684800009476, "duration_ms": 7.9295999894384295}
+{"event": "start", "id": 37, "parent": 18, "phase": "cloud.review", "start_ms": 65514.28939998732, "system_chars": 2590, "input_chars": 2948, "image_bytes_base64": 0}
+{"event": "start", "id": 38, "parent": 37, "phase": "cloud.wait_response_headers", "start_ms": 65546.61950000445}

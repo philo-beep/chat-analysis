@@ -1,0 +1,97 @@
+{
+  "customer_profile": {
+    "communication_preferences": [],
+    "company": "未知",
+    "concerns": [
+      "预算上限6000元",
+      "收货时间要求",
+      "颜色和尺码表尚未确认"
+    ],
+    "decision_style": "未知",
+    "display_name": "未知",
+    "industry": "未知",
+    "next_follow_up": "未知",
+    "risk_points": [
+      "具体报价还要内部审批",
+      "颜色和尺码表尚未确认",
+      "标识文件尚未提供"
+    ],
+    "role": "未知",
+    "communication_strategy": "",
+    "communication_points": []
+  },
+  "ddl_tasks": [
+    {
+      "date_basis": "inferred",
+      "ddl_date": "{{tomorrow}}",
+      "source_quote": "明天下午前给你分项报价和效果图",
+      "start_date": null,
+      "title": "提供分项报价和效果图"
+    },
+    {
+      "date_basis": "inferred",
+      "ddl_date": "{{delivery_date}}",
+      "source_quote": "收货要在11月20日前",
+      "start_date": null,
+      "title": "完成收货"
+    }
+  ],
+  "questions": [
+    {
+      "initial_guess": "演示按本次参考日期推算为{{tomorrow}}；截图标注10月19日但未写年份，请核对实际聊天日期。",
+      "question": "截图中的“明天下午前”对应哪一天？",
+      "related_ddl_index": 0
+    },
+    {
+      "initial_guess": "演示按接下来一次11月20日推算为{{delivery_date}}，年份和实际聊天日期仍需确认。",
+      "question": "收货截止日期是否为{{delivery_date}}？",
+      "related_ddl_index": 1
+    },
+    {
+      "initial_guess": "客户表示颜色和尺码表仍在确认",
+      "question": "颜色和尺码表确认后，方便提供最终版本吗？",
+      "related_ddl_index": null
+    },
+    {
+      "initial_guess": "客户表示稍后发送标识文件",
+      "question": "标识文件预计何时可以发送？",
+      "related_ddl_index": null
+    },
+    {
+      "initial_guess": "预算上限已明确为6000元，但报价仍需内部审批",
+      "question": "内部审批预计何时完成，是否有需要纳入报价的审批要求？",
+      "related_ddl_index": null
+    }
+  ],
+  "reply": "收到，文化衫数量已更新为150件，预算上限为6000元，收货希望在11月20日前。想再确认一下收货年份；颜色和尺码表、标识文件方便时也请发我，另外预算内部审批预计何时完成？",
+  "requirements": [
+    {
+      "evidence": "我们公司活动想定一批文化衫",
+      "field": "产品",
+      "value": "文化衫"
+    },
+    {
+      "evidence": "人数刚确认了，要改成150件",
+      "field": "数量",
+      "value": "150件"
+    },
+    {
+      "evidence": "预算上限6000元",
+      "field": "预算上限",
+      "value": "6000元"
+    },
+    {
+      "evidence": "收货要在11月20日前",
+      "field": "收货时间",
+      "value": "11月20日前"
+    }
+  ],
+  "suggested_tasks": [
+    {
+      "priority": "high",
+      "reason": "商家表示需要先核实生产和物流时间，客户提出11月20日前收货。",
+      "title": "核实生产与物流时间"
+    }
+  ],
+  "tasks": []
+}
